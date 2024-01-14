@@ -50,7 +50,7 @@ class Model(object):
     def __init__(self, label=None):
         # Initialize model structure
         self._layers = []
-        self._validator = Validator({})
+        self._validator = None
         self.label = label
                                          
     @property
@@ -136,6 +136,9 @@ class Model(object):
             model. Use the `parameters` property to see which parameters are 
             required to be directly input when applying the model.
         """
+        # Check for validator
+        if self._validator is None:
+            return {}
         # Validate the parameters
         self._validator.validate(params)
         if expand_dict:

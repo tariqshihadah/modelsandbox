@@ -8,7 +8,7 @@ def _load_schema(obj, search_paths=[]):
     """
     # If dictionary, return
     if isinstance(obj, dict):
-        return schema
+        return obj
     
     # If string, try to load JSON file
     elif isinstance(obj, str):
