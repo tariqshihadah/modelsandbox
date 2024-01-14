@@ -1,0 +1,48 @@
+{
+    "aadt": {
+        "type": "float",
+        "min": 0,
+        "max": 10e6,
+        "default": 0
+    },
+    "curve_length": {
+        "type": "float",
+        "min": 0,
+        "max": 10e3,
+        "less_than_equal": "length",
+        "default": 0
+    },
+    "curve_radius": {
+        "type": "float",
+        "min": 0,
+        "max": 10e5,
+        "default": 0
+    },
+    "lane_width": {
+        "type": "float",
+        "min": 6,
+        "max": 24,
+        "default": 12
+    },
+    "length": {
+        "type": "float",
+        "min": 0,
+        "max": 10e3,
+        "default": 0
+    },
+    "shoulder_type": {
+        "type": "string",
+        "allowed": ["paved", "gravel", "composite", "turf"],
+        "default": "paved"
+    },
+    "shoulder_width": {
+        "type": "float",
+        "min": 0,
+        "max": 10e2,
+        "default": 0
+    },
+    "spiral": {
+        "type": "string",
+        "allowed": ["both", "neither", "one"]
+    }
+}

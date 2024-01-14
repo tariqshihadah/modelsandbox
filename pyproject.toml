@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "modelsandbox"
+version = "0.1.0"
+description = "Framework for building complex, multi-layer, highly-parameterized mathematical models"
+requires-python = ">=3.8"
+license = {file = "LICENSE.rst"}
+keywords=["python", "data", "model", "analysis", "builder"]
+authors = [
+    {name = "Tariq Shihadah", email = "tariq.shihadah@gmail.com"}
+]
+dependencies = [
+    "pandas", 
+    "cerberus", 
+]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Unix",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+]
+dynamic = ["readme"]
+
+[project.urls]
+documentation = "https://github.com/tariqshihadah/modelsandbox"
+repository = "https://github.com/tariqshihadah/modelsandbox"
+
+[tool.setuptools.packages.find]
+include = ["modelsandbox*"]
+exclude = ["modelsandbox.tests*"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.rst"]}
