@@ -47,6 +47,7 @@ def per_diem_cost(number_of_travelers, number_of_nights, per_diem):
 
 # Add a second layer to the model
 model.add_layer('Aggregate expenses')
+
 # Add processor to compute total trip cost
 @model.include_process_function()
 def total_trip_cost(travel_cost, lodging_cost, per_diem_cost):
