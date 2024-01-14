@@ -52,6 +52,8 @@ The ``include_process_function`` method returns a decorator which can be placed 
 
 Now that we've determined the parameters needed for the model, we can pass these parameters to the model and run it using the ``analyze`` method, producing a ``dict`` of model parameters and returns along with their provided and computed values, respectively::
 
+    # example.ipynb
+
     # Run the model
     model.analyze(number_of_travelers=3, ticket_cost=500)
 
@@ -62,8 +64,6 @@ Now that we've determined the parameters needed for the model, we can pass these
 This basic model doesn't offer much benefit over a simple Python function which could do the same. However, once we begin to expand it, creating additional parameterization, interdependency of model features, and more, it begins to simplify the modelling process significantly. Here's some additional expansion for example::
 
     # example.py
-
-    ...
 
     # Add processor to compute lodging cost
     @model.include_process_function()
@@ -77,6 +77,8 @@ This basic model doesn't offer much benefit over a simple Python function which 
 
 We've added a couple additional computations at the first level. If we want to then aggregate the results of each of these processors, we can add another layer and gain access to the outputs of each previous processor as a new input::
 
+    # example.py
+
     # Add a second layer to the model
     model.add_layer('Aggregate expenses')
 
@@ -86,6 +88,8 @@ We've added a couple additional computations at the first level. If we want to t
         return travel_cost + lodging_cost + per_diem_cost
 
 Re-running the ``parameters`` property and the ``analyze`` method, we can see that the new processor paramters have been added to the model::
+
+    # example.ipynb
 
     # Inspect the model's parameters
     model.parameters
@@ -119,6 +123,8 @@ Note that though some parameters, such as the ``number_of_travelers`` parameter,
 
 For models which require references or logical patterns such as lookup tables, we can also employ the ``ProcessSchema`` class in addition to the ``ProcessFunction`` class we've been using with the ``include_process_function`` method/decorator. To add such a feature to our model, we can do the following::
 
+    # example.py
+
     # Define a process schema according to documentation
     schema = {
         "label": "ticket_cost",
@@ -143,6 +149,8 @@ For models which require references or logical patterns such as lookup tables, w
 
 If we make this addition to a new layer before our initial layer, this will allow us to input the ``destination`` and ``airline_class`` parameters instead of the ``ticket_cost`` parameter directly, which will instead be automatically computed for us. Note that this could also be done by creating a separate ``.py`` or ``.json`` file and loading it into the model file or passing the path of the separate file to the ``add_process_schema`` method. Let's take another look at the model's ``structure`` and ``parameters`` properties with the newly-defined model::
 
+    # example.ipynb
+
     # Inspect the model's structure
     model.structure
 
@@ -161,6 +169,8 @@ If we make this addition to a new layer before our initial layer, this will allo
          'per_diem']
 
 Now let's analyze the model using some example inputs to see our new results::
+
+    # example.ipynb
 
     # Run the model
     model.analyze(
@@ -186,6 +196,8 @@ Now let's analyze the model using some example inputs to see our new results::
          'total_trip_cost': 4434}
 
 The final ``example.py`` model file is shown below::
+
+    # example.py
 
     from modelsandbox import Model
 
