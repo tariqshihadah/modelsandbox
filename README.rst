@@ -6,6 +6,6 @@ Processors are the building blocks of a model, defining individual parameterized
 
 Types of processors are represented by the following classes:
 
-* `ProcessFunction` This class is built around a single callable, most commonly a defined Python function, which takes a number of parameters and performs a single model task, returning a single output. Because these use callables which can be flexibly defined in Python, they are effective for performing the more mathematical processes of the model.
+* ``ProcessFunction`` This class is built around a single callable, most commonly a defined Python function, which takes a number of parameters and performs a single model task, returning a single output. Because these use callables which can be flexibly defined in Python, they are effective for performing the more mathematical processes of the model.
 
-* `ProcessSchema` This class is built around a schema `dict` or `JSON` file which contains information on a series of logical tests based on a number of parameters, returning a single output or a `dict` of output key: value pairs. Because these use static logical schemas, they are effective for performing more the more logical processes of the model or replacing table references.
+* ``ProcessSchema`` This class is built around a schema ``dict`` or ``JSON`` file which contains information on a series of logical tests based on a number of parameters, returning a single output or a ``dict`` of output key: value pairs. Because these use static logical schemas, they are effective for performing more the more logical processes of the model or replacing table references.
