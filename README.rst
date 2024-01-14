@@ -21,7 +21,9 @@ Creating a new model from scratch is easy. The ``Model`` class provides instant 
     # Initialize the model class
     model = Model()
 
-One the ``Model`` class has been instantiated, we can begin building a basic model by adding a layer and a ``ProcessFunction``::
+Adding Process Functions
+------------------------
+Once the ``Model`` class has been instantiated, we can begin building a basic model by adding a layer and a ``ProcessFunction``::
 
     # example.py
 
@@ -33,6 +35,8 @@ One the ``Model`` class has been instantiated, we can begin building a basic mod
     def travel_cost(number_of_travelers, ticket_cost):
         return number_of_travelers * ticket_cost
 
+Inspecting the Model
+--------------------
 The ``include_process_function`` method returns a decorator which can be placed in front of a function definition, adding that function to the model and exposing its features at the model level. If we save the model in ``example.py`` as a basic Python file or as a Python module, we can then import it and run it in a Jupyter Notebook or elsewhere, and using the ``structure`` and ``parameters`` properties, we can see that the ``travel_cost`` function is now built into the model::
 
     # example.ipynb
@@ -50,6 +54,8 @@ The ``include_process_function`` method returns a decorator which can be placed 
 
     >>> ['number_of_travelers', 'ticket_cost']
 
+Running the Model
+-----------------
 Now that we've determined the parameters needed for the model, we can pass these parameters to the model and run it using the ``analyze`` method, producing a ``dict`` of model parameters and returns along with their provided and computed values, respectively::
 
     # example.ipynb
@@ -61,6 +67,8 @@ Now that we've determined the parameters needed for the model, we can pass these
          'ticket_cost': 500,
          'travel_cost': 1500}
 
+Expanding the Model
+-------------------
 This basic model doesn't offer much benefit over a simple Python function which could do the same. However, once we begin to expand it, creating additional parameterization, interdependency of model features, and more, it begins to simplify the modelling process significantly. Here's some additional expansion for example::
 
     # example.py
@@ -121,6 +129,8 @@ Re-running the ``parameters`` property and the ``analyze`` method, we can see th
 
 Note that though some parameters, such as the ``number_of_travelers`` parameter, get used in multiple functions, they only appear once and only need to be passed to the model a single time. Additionally, though we use the output of the ``travel_cost`` function as a parameter in the ``total_trip_cost`` function, we are not required to pass it on its own to the model.
 
+Process Schemas
+---------------
 For models which require references or logical patterns such as lookup tables, we can also employ the ``ProcessSchema`` class in addition to the ``ProcessFunction`` class we've been using with the ``include_process_function`` method/decorator. To add such a feature to our model, we can do the following::
 
     # example.py
@@ -195,6 +205,8 @@ Now let's analyze the model using some example inputs to see our new results::
          'per_diem_cost': 864,
          'total_trip_cost': 4434}
 
+Final Example
+-------------
 The final ``example.py`` model file is shown below::
 
     # example.py
@@ -248,7 +260,7 @@ The final ``example.py`` model file is shown below::
 
     # Add a second layer to the model
     model.add_layer('Aggregate expenses')
-    
+
     # Add processor to compute total trip cost
     @model.include_process_function()
     def total_trip_cost(travel_cost, lodging_cost, per_diem_cost):
