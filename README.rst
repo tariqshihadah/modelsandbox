@@ -47,12 +47,14 @@ The ``include_process_function`` method returns a decorator which can be placed 
     # Inspect the model's structure
     model.structure
 
-    >>> {'Compute expenses': ['travel_cost']}
+    [Output]:
+    {'Compute expenses': ['travel_cost']}
 
     # Inspect the model's parameters
     model.parameters
 
-    >>> ['number_of_travelers', 'ticket_cost']
+    [Output]:
+    ['number_of_travelers', 'ticket_cost']
 
 Running the Model
 -----------------
@@ -63,9 +65,10 @@ Now that we've determined the parameters needed for the model, we can pass these
     # Run the model
     model.analyze(number_of_travelers=3, ticket_cost=500)
 
-    >>> {'number_of_travelers': 3,
-         'ticket_cost': 500,
-         'travel_cost': 1500}
+    [Output]:
+    {'number_of_travelers': 3,
+     'ticket_cost': 500,
+     'travel_cost': 1500}
 
 Expanding the Model
 -------------------
@@ -102,11 +105,12 @@ Re-running the ``parameters`` property and the ``analyze`` method, we can see th
     # Inspect the model's parameters
     model.parameters
 
-    >>> ['nightly_cost',
-         'number_of_nights',
-         'number_of_travelers',
-         'per_diem',
-         'ticket_cost']
+    [Output]:
+    ['nightly_cost',
+     'number_of_nights',
+     'number_of_travelers',
+     'per_diem',
+     'ticket_cost']
 
     # Run the model
     model.analyze(
@@ -117,15 +121,16 @@ Re-running the ``parameters`` property and the ``analyze`` method, we can see th
         ticket_cost=500
     )
 
-    >>> {'nightly_cost': 185,
-         'number_of_nights': 4,
-         'number_of_travelers': 3,
-         'per_diem': 72,
-         'ticket_cost': 500,
-         'travel_cost': 1500,
-         'lodging_cost': 2220,
-         'per_diem_cost': 864,
-         'total_trip_cost': 4584}
+    [Output]:
+    {'nightly_cost': 185,
+     'number_of_nights': 4,
+     'number_of_travelers': 3,
+     'per_diem': 72,
+     'ticket_cost': 500,
+     'travel_cost': 1500,
+     'lodging_cost': 2220,
+     'per_diem_cost': 864,
+     'total_trip_cost': 4584}
 
 Note that though some parameters, such as the ``number_of_travelers`` parameter, get used in multiple functions, they only appear once and only need to be passed to the model a single time. Additionally, though we use the output of the ``travel_cost`` function as a parameter in the ``total_trip_cost`` function, we are not required to pass it on its own to the model.
 
@@ -164,19 +169,21 @@ If we make this addition to a new layer before our initial layer, this will allo
     # Inspect the model's structure
     model.structure
 
-    >>> {'Compute ticket cost': ['ticket_cost'],
-         'Compute expenses': ['travel_cost', 'lodging_cost', 'per_diem_cost'],
-         'Aggregate expenses': ['total_trip_cost']}
+    [Output]:
+    {'Compute ticket cost': ['ticket_cost'],
+     'Compute expenses': ['travel_cost', 'lodging_cost', 'per_diem_cost'],
+     'Aggregate expenses': ['total_trip_cost']}
 
     # Inspect the model's parameters
     model.parameters
 
-    >>> ['airline_class',
-         'destination',
-         'nightly_cost',
-         'number_of_nights',
-         'number_of_travelers',
-         'per_diem']
+    [Output]:
+    ['airline_class',
+     'destination',
+     'nightly_cost',
+     'number_of_nights',
+     'number_of_travelers',
+     'per_diem']
 
 Now let's analyze the model using some example inputs to see our new results::
 
@@ -193,17 +200,18 @@ Now let's analyze the model using some example inputs to see our new results::
         ticket_cost=500
     )
 
-    >>> {'airline_class': 'Business',
-         'destination': 'Chicago',
-         'nightly_cost': 185,
-         'number_of_nights': 4,
-         'number_of_travelers': 3,
-         'per_diem': 72,
-         'ticket_cost': 450,
-         'travel_cost': 1350,
-         'lodging_cost': 2220,
-         'per_diem_cost': 864,
-         'total_trip_cost': 4434}
+    [Output]:
+    {'airline_class': 'Business',
+     'destination': 'Chicago',
+     'nightly_cost': 185,
+     'number_of_nights': 4,
+     'number_of_travelers': 3,
+     'per_diem': 72,
+     'ticket_cost': 450,
+     'travel_cost': 1350,
+     'lodging_cost': 2220,
+     'per_diem_cost': 864,
+     'total_trip_cost': 4434}
 
 Final Example
 -------------
@@ -240,7 +248,7 @@ The final ``example.py`` model file is shown below::
     # Add the process schema to the model
     model.add_process_schema(schema)
 
-    # Add a layer to the model
+    # Add a layer to the model to compute additional costs
     model.add_layer('Compute expenses')
 
     # Add a processor to compute travel cost
@@ -258,7 +266,7 @@ The final ``example.py`` model file is shown below::
     def per_diem_cost(number_of_travelers, number_of_nights, per_diem):
         return number_of_travelers * number_of_nights * per_diem
 
-    # Add a second layer to the model
+    # Add a layer to the model to aggregate costs
     model.add_layer('Aggregate expenses')
 
     # Add processor to compute total trip cost
