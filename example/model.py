@@ -1,4 +1,4 @@
-from modelsandbox import Model
+from modelsandbox_old import Model
 
 # Initialize the model class
 model = Model()

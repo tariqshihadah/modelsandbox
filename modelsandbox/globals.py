@@ -1,0 +1,1 @@
+_VALID_SCHEMA_ACTIONS = ['get', 'lt', 'gt', 'lte', 'gte']

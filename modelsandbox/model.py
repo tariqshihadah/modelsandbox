@@ -1,388 +1,200 @@
-import json, os, itertools
-from modelsandbox.processors import ProcessFunction, ProcessSchema
-from modelsandbox.validation import ExtendedValidator as Validator
-from modelsandbox.helpers import _load_schema
+from typing import Any
+from modelsandbox.globals import _VALID_SCHEMA_ACTIONS
 
 
 class Model(object):
     """
-    Flexible class for building intricate, multi-level, highly parameterized 
-    mathematical models. Models are defined using a series of computational 
-    layers which can be created with the `add_layer()` class method and which 
-    are invoked sequentially when the model is called. These layers are 
-    populated with a series of processors which can be created in multiple 
-    ways and which are also invoked sequentially within each layer when the 
-    model is called.
-
-    Processors are the building blocks of a model, defining individual 
-    parameterized mathematical or computational processes within each layer. 
-    When the model is run, each layer is processed sequentially and each 
-    processor is processed sequentially within the layer. The parameters 
-    required by each processor are collected and exposed at the model level, 
-    requiring all to be input when running the model. These parameters are 
-    then passed as keyword arguments to each layer, and the outputs of each 
-    processor are collected and added to the `dict` of parameters based on 
-    the processor label or schema data and are then passed as keyword 
-    arguments to the next layer. In this way, processor outputs can be 
-    referenced and used in subsequent layers of the model.
-
-    Types of processors are represented by the following classes:
-
-    * `ProcessFunction` This class is built around a single callable, most 
-    commonly a defined Python function, which takes a number of parameters 
-    and performs a single model task, returning a single output. Because these 
-    use callables which can be flexibly defined in Python, they are effective 
-    for performing the more mathematical processes of the model.
-
-    * `ProcessSchema` This class is built around a schema `dict` or `JSON` 
-    file which contains information on a series of logical tests based on a 
-    number of parameters, returning a single output or a `dict` of output key: 
-    value pairs. Because these use static logical schemas, they are effective 
-    for performing more the more logical processes of the model or replacing 
-    table references.
-
-    Parameters
-    ----------
-    label : label, optional
-        Label associated with the model instance.
+    Top-level class for defining and executing models.
     """
 
-    def __init__(self, label=None):
-        # Initialize model structure
-        self._layers = []
-        self._validator = None
-        self.label = label
-                                         
-    @property
-    def model_path(self):
-        return os.path.dirname(os.path.realpath(__file__))
-    
-    @property
-    def layers(self):
-        """
-        List of all defined layers within the model.
-        """
-        return self._layers
-    
-    @property
-    def processors(self):
-        """
-        List of lists of all defined processors within all defined layers 
-        within the model.
-        """
-        return [layer.processors for layer in self.layers]
+    def __init__(self):
+        self._model = ModelContainer()
 
     @property
-    def parameters(self):
+    def params(self):
         """
-        List of all parameters required by all processors defined within the 
-        model.
+        Return a list of parameters for the model.
         """
-        # Collect all unique parameters from all processors
-        parameters = []
-        for layer in self._layers:
-            parameters.extend(layer.parameters)
-        return sorted(set(parameters) - set(self.returns))
+        return self._model.params
+
+    def analyze(**params):
+        """
+        Execute the model.
+        """
+        pass
+
+
+class ModelComponent(object):
+    """
+    Base class for model components.
+    """
+
+    def __call__(self, **params) -> dict:
+        return self.analyze(**params)
+    
+    def __name__(self) -> str:
+        return self._label
     
     @property
-    def tags(self):
+    def label(self) -> str:
         """
-        List of unique processor tags included within the defined model.
+        Return the label for the model component.
         """
-        # Get list of all processors
-        processors = list(itertools.chain.from_iterable(self.processors))
-        # Get tags
-        tags = list(itertools.chain.from_iterable(p.tags for p in processors))
-        return list(set(tags))
-
-    @property
-    def tagged(self):
-        """
-        Dictionary of unique processor tags and lists of all processors 
-        associated with each tag.
-        """
-        # Get list of all processors
-        processors = list(itertools.chain.from_iterable(self.processors))
-        # Find tagged processors
-        tagged = {}
-        for tag in self.tags:
-            tagged[tag] = [p for p in processors if tag in p.tags]
-        return tagged
-
-    @property
-    def returns(self):
-        """
-        List of all returns created by all processors defined within the model.
-        """
-        # Collect all unique parameters from all processors
-        returns = []
-        for layer in self._layers:
-            returns.extend(layer.returns)
-        return sorted(set(returns))
+        return self._label
     
-    def validate(self, expand_dict=False, **params) -> dict:
+    @label.setter
+    def label(self, label: str) -> None:
+        self._label = label
+    
+    @property
+    def tags(self) -> list:
         """
-        Validate the input parameters, returning the output of the `cerberus` 
-        validation API, aligned to the input parameters if requested.
-
-        Parameters
-        ----------
-        expand_dict : bool, default False
-            Whether to expand the validation results `dict` to include all 
-            input parameters, producing an empty list for successfully 
-            validated parameters.
-        **params
-            Keyword arguments for all required parameters in the defined 
-            model. Use the `parameters` property to see which parameters are 
-            required to be directly input when applying the model.
+        Return a list of tags for the model component.
         """
-        # Check for validator
-        if self._validator is None:
-            return {}
-        # Validate the parameters
-        self._validator.validate(params)
-        if expand_dict:
-            # Return dictionary of validation errors mapped to the inputs
-            return {self._validator.errors.get(key, []) for key in params.keys()}
+        return self._tags
+    
+    @tags.setter
+    def tags(self, tags: list) -> None:
+        if tags is None:
+            self._tags = []
+        elif isinstance(tags, str):
+            self._tags = [tags]
         else:
-            return self._validator.errors
+            self._tags = list(tags)
 
-    def analyze(self, **params):
+    def analyze(self, **params) -> dict:
         """
-        Apply the model to the input keyword argument parameters, running all 
-        layers and returning a structured model output result.
+        Execute the model component.
+        """
+        raise NotImplementedError
 
-        Parameters
-        ----------
-        **params
-            Keyword arguments for all required parameters in the defined 
-            model. Use the `parameters` property to see which parameters are 
-            required to be directly input when applying the model.
-        """
-        # Validate inputs
-        errors = self.validate(**params)
-        if len(errors) > 0:
-            raise ValueError(
-                f"Input parameters caused validation errors:\n{errors}"
+
+class ModelContainer(ModelComponent):
+    """
+    Main class for model containers which may contain individual model 
+    processors or additional model containers.
+    """
+
+    def __init__(self) -> None:
+        self._contents = []
+
+    def __len__(self) -> int:
+        return len(self._contents)
+
+    def __getitem__(self, index):
+        try:
+            return self._contents[index]
+        except:
+            raise IndexError(
+                f"Index {index} is out of range of the {self.__class__} with "
+                f"content length of {len(self._contents)}."
             )
-        else:
-            valid_params = {**params} # INPUT MODIFICATION NOT YET IMPLEMENTED
-
-        # Iterate over layers
-        layer_params = {**valid_params}
-        for layer in self._layers:
-            # Iterate over layer processors
-            layer_results = {}
-            for processor in layer._processors:
-                # Group parameters by tags where applicable
-                tagged = {}
-                for tag, ps in self.tagged.items():
-                    # Get list of unique return keys from all processors
-                    return_keys = list(
-                        itertools.chain.from_iterable(p.returns for p in ps)
-                    )
-                    tagged[f'__{tag}'] = {
-                        key: layer_params[key] for key in return_keys \
-                        if key in layer_params
-                    }
-                
-                # Analyze current processor
-                processor_params = {
-                    key: val for key, val in \
-                    {**layer_params, **tagged}.items() \
-                    if key in processor.parameters
-                }
-                processor_results = processor.analyze(**processor_params)
-                # Add processor results to current layer results
-                layer_results = {**layer_results, **processor_results}
-            
-            # Log results from current layer as parameters for the next layer
-            layer_params = {**layer_params, **layer_results}
-
-        # Return structured model output
-        return layer_params
     
-    def add_validation(
-            self, 
-            schema, 
-            require_all=True, 
-            allow_unknown=True, 
-            **kwargs
-    ):
-        """
-        Add a validation schema to the model to validate input model 
-        parameters. Validation is performed using an extension of the open-
-        source `cerberus` package and validation schemas should follow their 
-        standards and documentation. Additional provided keyword arguments 
-        will be passed to the `cerberus.Validator` instantiation call.
-
-        Parameters
-        ----------
-        schema : dict, str, or path
-            Schema data following the required structure of the 
-            `cerberus.Validator` class. Can be input as a python `dict`, a 
-            stringified python `dict` or JSON file, or as a path to a valid 
-            JSON file which will be loaded.
-        require_all : bool, default True
-            Whether all parameters defined in the validation schema should be 
-            required for validation. Missing fields will produce a 
-            `required_field` error.
-        allow_unknown : bool, default True
-            Whether parameters that aren't included in the validation schema 
-            should produce an `unknown_field_error`. Should be `True` if not 
-            all model parameters are being validated directly.
-        """
-        # Load the validation schema and create a cerberus Validator
-        schema = _load_schema(schema)
-        self._validator = Validator(
-            schema, 
-            require_all=require_all, 
-            allow_unknown=allow_unknown, 
-            **kwargs
-        )
-
-    def add_layer(self, label=None, **kwargs):
-        """
-        Add a `ProcessLayer` to the model to build additional processors into.
-        """
-        # Default label
-        if label is None:
-            label = f'Layer #{len(self._layers) + 1}'
-        # Create and append the new layer
-        layer = ProcessLayer(label=label, **kwargs)
-        self._layers.append(layer)
-        return layer
-
-    def add_process_function(self, obj, tags=None, layer_index=None, **kwargs):
-        """
-        Add a `ProcessFunction` to the selected `ProcessLayer`.
-
-        Parameters
-        ----------
-        obj : callable
-            Callable object which will be the basis for the `ProcessFunction`.
-        tags : list, optional
-            List of tags to be associated with the `ProcessFunction`. Tags may 
-            be shared between multiple `ProcessFunction` instances, allowing 
-            them to be referenced collectively.
-        layer_index : int, optional
-            The integer index of the layer to which the `ProcessFunction` should be 
-            appended.
-        """
-        # If no layers are currently defined, create a new one
-        if len(self._layers) == 0:
-            self.add_layer()
-        # Create and append the new processor to the latest layer
-        return self._layers[-1].add_process_function(obj, tags=tags)
-
-    def add_process_schema(self, schema, tags=None, layer_index=None, **kwargs):
-        """
-        Add a process schema to the selected `ProcessLayer`.
-
-        Parameters
-        ----------
-        schema : dict, str, or path
-            Schema data following the required structure of the 
-            `ProcessSchema` class. Can be input as a Python `dict`, an 
-            absolute path to a JSON file, or a relative path to a JSON file 
-            within the default `SCHEMA_PATH` directories.
-        tags : list, optional
-            List of tags to be associated with the `ProcessSchema`. Tags may be 
-            shared between multiple `ProcessFunction` instances, allowing them to 
-            be referenced collectively.
-        layer_index : int, optional
-            The integer index of the layer to which the `ProcessFunction` should be 
-            appended.
-        """
-        # If no layers are currently defined, create a new one
-        if len(self._layers) == 0:
-            self.add_layer()
-        # Create and append the new processor to the latest layer
-        return self._layers[-1].add_process_schema(schema, tags=tags)
-
-    def include_process_function(self, tags=None, layer_index=None, **kwargs):
-        """
-        Returns a decorator which can be placed before a declared function 
-        which takes that function and adds it as a processor to the selected 
-        `ProcessLayer` similar to the `add_process_function` method.
-
-        Parameters
-        ----------
-        tags : list, optional
-            List of tags to be associated with the `ProcessFunction`. Tags may be 
-            shared between multiple `ProcessFunction` instances, allowing them to 
-            be referenced collectively.
-        layer_index : int, optional
-            The integer index of the layer to which the `ProcessFunction` should be 
-            appended.
-        """
-        # Define the decorator
-        def decorator(obj):
-            # Add the processor using the provided parameters
-            self.add_process_function(
-                obj, tags=tags, layer_index=layer_index, **kwargs)
-        return decorator
-
     @property
-    def structure(self):
-        structure = {
-            layer.label: [processor.label for processor in layer._processors] 
-            for layer in self._layers
-        }
-        return structure
+    def contents(self) -> list:
+        return self._contents
     
-
-class ProcessLayer(object):
-
-    def __init__(self, label=None, **kwargs):
-        self._processors = []
-        self.label = label
-
     @property
-    def processors(self):
+    def params(self) -> list:
         """
-        List of all defined processors within the model layer.
+        Return a list of parameters for all contents in the model container.
         """
-        return self._processors
-
+        params = []
+        for content in self._contents:
+            params.extend(content.params)
+        return list(set(params))
+    
     @property
-    def parameters(self):
-        # Collect all unique parameters from all processors
-        parameters = []
-        for processor in self._processors:
-            parameters.extend(processor.parameters)
-        return sorted(set(parameters))
-
-    @property
-    def returns(self):
-        # Collect all unique parameters from all processors
+    def returns(self) -> list:
+        """
+        Return a list of return values for all contents in the model container.
+        """
         returns = []
-        for processor in self._processors:
-            returns.extend(processor.returns)
-        return sorted(set(returns))
+        for content in self._contents:
+            returns.extend(content.returns)
+        return list(set(returns))
 
-    def add_process_function(self, obj, **kwargs):
-        """
-        Add a callable `ProcessFunction` to the layer. Can be passed an actual 
-        `ProcessFunction` instance or a callable which will be used to create a new 
-        `ProcessFunction` instance.
-        """
-        # Check input type
-        if isinstance(obj, ProcessFunction):
-            pf = obj
-        else:
-            pf = ProcessFunction(obj, **kwargs)
-        self._processors.append(pf)
-        return pf
 
-    def add_process_schema(self, schema, **kwargs):
+class ModelProcessor(ModelComponent):
+    """
+    Base class for model processors.
+
+    Model processors are the lowest level of model definition. They include 
+    the following subclasses:
+
+    ProcessSchema
+    ProcessFunction
+    """
+    
+    def __init__(self):
+        pass
+
+    def __call__(self, **kwargs) -> dict:
+        return self.anlayze(**kwargs)
+    
+    def analyze(self, **kwargs) -> dict:
         """
+        Execute the model processor.
         """
-        # Check input type
-        if isinstance(schema, ProcessSchema):
-            ps = schema
-        else:
-            ps = ProcessSchema(schema, **kwargs)
-        self._processors.append(ps)
-        return ps
-        
+        pass
+
+    
+class SchemaProcessor(ModelProcessor):
+    """
+    Class for defining a model processor using a schema.
+    """
+    
+    def __init__(self, schema: dict) -> None:
+        self.schema = schema
+
+    def analyze(self, **params) -> dict:
+        """
+        Execute the model processor.
+        """
+        # Pull the schema data
+        schema_data = self.data.copy()
+
+
+
+
+def _validate_schema_processor(schema):
+        # Check for required structure
+        try:
+            keys = schema["parameters"]
+        except KeyError:
+            raise KeyError(
+                "Input schema is missing the required `parameters` "
+                "information."
+            )
+        try:
+            actions = schema["actions"]
+            assert len(actions) == len(keys)
+        except KeyError:
+            raise KeyError(
+                "Input schema is missing the required `actions` information."
+            )
+        except AssertionError:
+            raise ValueError(
+                "Number of `actions` must be equal to the number of "
+                "`parameters` in the provided schema."
+            )
+        try:
+            assert all(action in self._valid_actions for action in actions)
+        except:
+            raise ValueError(
+                f"Each input `action` must only be one of "
+                f"{self._valid_actions}."
+            )
+        try:
+            data = schema["data"]
+        except KeyError:
+            raise KeyError(
+                "Input schema is missing the required `data` information."
+            )
+        try:
+            schema["label"]
+        except KeyError:
+            raise KeyError(
+                "Input schema is missing the required `label` information."
+            )
+        return schema
