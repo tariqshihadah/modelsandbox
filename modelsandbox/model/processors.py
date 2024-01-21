@@ -238,10 +238,10 @@ class SchemaProcessor(ModelProcessorBase):
         return label
 
     @classmethod
-    def _validate_schema_processor(schema):
+    def _validate_schema(cls, schema):
             # Check for required structure
             try:
-                keys = schema["parameters"]
+                keys = schema["params"]
             except KeyError:
                 raise KeyError(
                     "Input schema is missing the required `parameters` "

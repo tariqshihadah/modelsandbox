@@ -71,6 +71,19 @@ class ModelLayer(ModelComponentBase):
                 processors.append(component)
         return processors
     
+    @property
+    def structure(self) -> dict:
+        """
+        Return a nested dictionary of the model structure.
+        """
+        structure = {}
+        for component in self._components:
+            if isinstance(component, ModelLayer):
+                structure[component.label] = component.structure
+            else:
+                structure[component.label] = component
+        return structure
+    
     def add_layer(self, label: str=None, tags: list=[]) -> None:
         """
         Add a new model Layer to the existing model Layer.
@@ -84,8 +97,13 @@ class ModelLayer(ModelComponentBase):
             shared between multiple components, allowing them to be referenced 
             collectively.
         """
+        # Check label
+        if label is None:
+            # Use default label
+            index = len([i for i in self._components if isinstance(i, ModelLayer)])
+            label = f"Layer {index + 1}"
         # Create the model layer
-        layer = ModelLayer(label, tags)
+        layer = ModelLayer(label=label, tags=tags)
         self._components.append(layer)
         return layer
     
@@ -146,3 +164,4 @@ class ModelLayer(ModelComponentBase):
         # Define the wrapper
         def wrapper(function):
             return self.add_function(function, label=label, tags=tags)
+        return wrapper

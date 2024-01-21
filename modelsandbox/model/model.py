@@ -1,4 +1,5 @@
 from typing import Any
+from modelsandbox.model.base import ModelComponentBase
 from modelsandbox.model.layer import ModelLayer
 from modelsandbox.model.processors import FunctionProcessor, SchemaProcessor, EmptyProcessor
 
@@ -12,7 +13,7 @@ class Model(object):
         self._root = ModelLayer()
 
     def __getitem__(self, index):
-        return ModelPointer(self, index)
+        return ModelPointer(self._root, index).get_component()
     
     def __setitem__(self, index, value):
         raise NotImplementedError(
@@ -31,20 +32,29 @@ class Model(object):
         """
         Return a list of parameters for the model.
         """
-        return self._model.params
+        return self._root.params
+    
+    @property
+    def returns(self):
+        """
+        Return a list of return values for the model.
+        """
+        return self._root.returns
 
     @property
     def processors(self):
         """
         Return a nested list processors of model components.
         """
-        processors = []
-        for component in self._root._components:
-            if isinstance(component, ModelLayer):
-                processors.append(component.processors)
-            else:
-                processors.append(component)
-        return processors
+
+        return self._root.processors
+    
+    @property
+    def structure(self):
+        """
+        Return a nested dictionary of the model structure.
+        """
+        return self._root.structure
 
     def analyze(**params):
         """
@@ -55,34 +65,34 @@ class Model(object):
 
 class ModelPointer(object):
     """
-    Class for referencing and adding model components.
+    Class for referencing and adding model components relative to a given root.
     """
 
-    def __init__(self, model: Model, loc: tuple=None) -> None:
-        self.model = model
+    def __init__(self, root: ModelComponentBase, loc: tuple=None) -> None:
+        self.root = root
         self.loc = loc
 
     @property
-    def model(self) -> Model:
+    def root(self) -> ModelComponentBase:
         """
-        Return the model being referenced by the pointer.
+        Return the model root being referenced by the pointer.
         """
-        return self._model
+        return self._root
     
-    @model.setter
-    def model(self, model: Model) -> None:
-        if not isinstance(model, Model):
+    @root.setter
+    def root(self, root: ModelComponentBase) -> None:
+        if not isinstance(root, ModelComponentBase):
             raise TypeError(
-                f"ModelPointer model must be of type {Model}, "
-                f"not {type(model)}."
+                f"ModelPointer root must be of type {ModelComponentBase}, "
+                f"not {type(root)}."
             )
-        self._model = model
+        self._root = root
 
     @property
     def loc(self) -> tuple:
         """
         Return the location of the model component being referenced by the 
-        pointer.
+        pointer relative to the root.
         """
         return self._loc
     
@@ -90,6 +100,8 @@ class ModelPointer(object):
     def loc(self, loc: tuple) -> None:
         if loc is None:
             self._loc = ()
+        elif isinstance(loc, int):
+            self._loc = (loc,)
         elif isinstance(loc, tuple):
             self._loc = loc
         else:
@@ -117,8 +129,8 @@ class ModelPointer(object):
         provided location.
         """
         loc = self._check_loc(loc)
-        # Get model root
-        component = self._model._root
+        # Get root
+        component = self._root
         for i, position in enumerate(loc):
             if isinstance(component, ModelLayer):
                 try:
@@ -134,3 +146,4 @@ class ModelPointer(object):
                     f"at position {i}: {position}. Cannot index a "
                     f"{type(component)}."
                 )
+        return component
