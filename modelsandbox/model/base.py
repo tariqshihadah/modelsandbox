@@ -1,3 +1,4 @@
+import re
 class ModelComponentBase(object):
     """
     Base class for model components.
@@ -29,12 +30,22 @@ class ModelComponentBase(object):
     
     @tags.setter
     def tags(self, tags: list) -> None:
+        # Validate input
         if tags is None:
-            self._tags = []
+            tags = []
         elif isinstance(tags, str):
-            self._tags = [tags]
+            tags = [tags]
         else:
-            self._tags = list(tags)
+            tags = list(tags)
+        # Format tags
+        pattern = r'[^a-z]'
+        cleaned = []
+        for tag in tags:
+            if not isinstance(tag, str):
+                raise TypeError("Tags must be strings.")
+            tag = f"__{re.sub(pattern, '', tag.lower())}"
+            cleaned.append(tag)
+        self._tags = cleaned
 
     def _validate_label(self, label: str) -> str:
         """

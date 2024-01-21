@@ -1,8 +1,6 @@
-from typing import Any
 from modelsandbox.model.base import ModelComponentBase
 from modelsandbox.model.layer import ModelLayer
 from modelsandbox.model.processors import FunctionProcessor, SchemaProcessor, EmptyProcessor
-from modelsandbox.model.pointer import ModelPointer
 
 
 class Model(object):
@@ -10,11 +8,11 @@ class Model(object):
     Top-level class for defining and executing models.
     """
 
-    def __init__(self):
-        self._root = ModelLayer()
+    def __init__(self, **kwargs):
+        self._root = ModelLayer(**kwargs)
 
     def __getitem__(self, index):
-        return ModelPointer(self._root, index).get_component()
+        return self._root[index]
     
     def __setitem__(self, index, value):
         raise NotImplementedError(
@@ -47,7 +45,6 @@ class Model(object):
         """
         Return a nested list processors of model components.
         """
-
         return self._root.processors
     
     @property
@@ -57,8 +54,30 @@ class Model(object):
         """
         return self._root.structure
 
-    def analyze(**params):
+    @property
+    def tags(self):
+        """
+        List of unique processor tags included within the model.
+        """
+        return self._root.tags
+
+    @property
+    def all_tags(self):
+        """
+        List of unique processor tags included within the model.
+        """
+        return self._root.all_tags
+
+    @property
+    def tagged(self):
+        """
+        Dictionary of unique processor tags and lists of all processors 
+        associated with each tag.
+        """
+        return self._root.tagged
+
+    def analyze(self, **params):
         """
         Execute the model.
         """
-        pass
+        return self._root.analyze(**params)

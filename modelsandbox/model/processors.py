@@ -23,7 +23,7 @@ class EmptyProcessor(ModelProcessorBase):
     Class for defining an empty model processor.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, label: str=None, tags: list=[]):
         self.label = label
         self.tags = tags
 
@@ -135,9 +135,9 @@ class SchemaProcessor(ModelProcessorBase):
         "label": "schema_1",
         # List of parameter names which will be passed to the `SchemaProcessor` 
         # as `**params`.
-        "parameters": ["lookup_param", "numerical_param"],
+        "params": ["lookup_param", "numerical_param"],
 
-        # List of actions of equal length to `parameters`. These actions will 
+        # List of actions of equal length to `params`. These actions will 
         # indicate how each parameter will be tested against the schema data. 
         # Note that associated schema data will always be tested with the 
         # requested action in chronological order, returning the first success.
@@ -244,7 +244,7 @@ class SchemaProcessor(ModelProcessorBase):
                 keys = schema["params"]
             except KeyError:
                 raise KeyError(
-                    "Input schema is missing the required `parameters` "
+                    "Input schema is missing the required `params` "
                     "information."
                 )
             try:
@@ -257,7 +257,7 @@ class SchemaProcessor(ModelProcessorBase):
             except AssertionError:
                 raise ValueError(
                     "Number of `actions` must be equal to the number of "
-                    "`parameters` in the provided schema."
+                    "`params` in the provided schema."
                 )
             try:
                 assert all(action in _VALID_SCHEMA_ACTIONS for action in actions)
@@ -283,24 +283,24 @@ class SchemaProcessor(ModelProcessorBase):
     def analyze(self, **params):
         """
         Analyze the schema using the input parameters which must align with 
-        the schema's `parameters` and `actions`.
+        the schema's `params` and `actions`.
         """
         # Pull schema data
         data = self.data.copy()
         # Iterate through keys and actions in schema
-        for parameter, action in zip(self.parameters, self.actions):
+        for param, action in zip(self.params, self.actions):
             SUCCESS = False
             # Pull parameter value
             try:
-                parameter_value = params[parameter]
+                param_value = params[param]
             except KeyError:
                 raise KeyError(
-                    f"Missing required `SchemaProcessor` parameter `{parameter}`."
+                    f"Missing required `SchemaProcessor` parameter `{param}`."
                 )
             # Check action with the appropriate test
             try:
                 if action in ['get']:
-                    data = data[parameter_value]
+                    data = data[param_value]
                     SUCCESS = True
                 elif action in ['lt', 'gt', 'lte', 'gte']:
                     # Select the appropriate test
@@ -314,7 +314,7 @@ class SchemaProcessor(ModelProcessorBase):
                         tester = lambda a, b: a >= b
                     # Iterate over data keys
                     for key, val in data.items():
-                        if tester(parameter_value, float(key)):
+                        if tester(param_value, float(key)):
                             data = val
                             SUCCESS = True
                             break
@@ -322,7 +322,7 @@ class SchemaProcessor(ModelProcessorBase):
             except:
                 raise ValueError(
                     f"Unable to satisfy test for schema parameter "
-                    f"`{parameter}: {action}` with value {parameter_value}."
+                    f"`{param}: {action}` with value {param_value}."
                 )
         
         # Return final retrieved data set
