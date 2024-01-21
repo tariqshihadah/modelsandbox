@@ -4,7 +4,7 @@ from modelsandbox_old import Model
 model = Model()
 
 # Add a layer to the model to compute airline ticket cost
-model.add_layer('Compute ticket cost')
+model.root.add_layer('Compute ticket cost')
 
 # Define a process schema for computing ticket cost
 schema = {

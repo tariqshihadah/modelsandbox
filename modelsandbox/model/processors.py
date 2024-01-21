@@ -1,37 +1,54 @@
-import json, os
-from modelsandbox_old.helpers import _load_schema
+from typing import Any
+from modelsandbox.globals import _VALID_SCHEMA_ACTIONS
+from modelsandbox.helpers import _load_schema
+from modelsandbox.model.base import ModelComponentBase
 
 
-class ProcessorBase(object):
-
-    def __call__(self, **kwargs):
-        return self.analyze(**kwargs)
-    
-    @property
-    def __name__(self):
-        return self._label
-
-    @property
-    def label(self):
-        return self._label
-    
-    @label.setter
-    def label(self, label):
-        self._label = self._validate_label(label)
-
-    @property
-    def tags(self):
-        return self._tags
-    
-    @tags.setter
-    def tags(self, tags):
-        if tags is None:
-            tags = []
-        self._tags = list(tags)
-
-
-class ProcessFunction(ProcessorBase):
+class ModelProcessorBase(ModelComponentBase):
     """
+    Base class for model processors.
+
+    Model processors are the lowest level of model definition. They include 
+    the following subclasses:
+
+    - FunctionProcessor
+    - SchemaProcessor
+    - EmptyProcessor
+    """
+    pass
+
+
+class EmptyProcessor(ModelProcessorBase):
+    """
+    Class for defining an empty model processor.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.label = label
+        self.tags = tags
+
+    @property
+    def params(self):
+        """
+        Return a list of parameters for the empty processor.
+        """
+        return []
+    
+    @property
+    def returns(self):
+        """
+        Return a list of return values for the empty processor.
+        """
+        return []
+    
+    def analyze(self, **params):
+        return {}
+    
+
+class FunctionProcessor(ModelProcessorBase):
+    """
+    Class for defining a model processor using a function.
+    
     This class is built around a single callable, most commonly a defined 
     Python function, which takes a number of parameters and performs a single 
     model task, returning a single output. Because these use callables which 
@@ -40,37 +57,45 @@ class ProcessFunction(ProcessorBase):
 
     Parameters
     ----------
-    obj : callable
-        Callable object which will be the basis for the `ProcessFunction`.
+    function : callable
+        Callable object which will be the basis for the `FunctionProcessor`.
     label : str, optional
-        Label associated with the `ProcessFunction`. If not provided, will 
-        default to the name of the input callable.
+        Label associated with the model component.
     tags : list, optional
-        List of tags to be associated with the `ProcessFunction`. Tags may be 
-        shared between multiple `ProcessFunction` instances, allowing them to 
-        be referenced collectively.
+        List of tags to be associated with the model component. Tags may be 
+        shared between multiple components, allowing them to be referenced 
+        collectively.
     """
 
-    def __init__(self, obj, label=None, tags=[]):
-        self.callable_ = obj
+    def __init__(self, function, label: str=None, tags: list=[]):
+        self.callable_ = function
         self.label = label
         self.tags = tags
 
     @property
-    def parameters(self):
+    def params(self) -> list:
+        """
+        Return a list of parameters for the function processor.
+        """
         num_args = self._callable_.__code__.co_argcount
         return list(self._callable_.__code__.co_varnames[:num_args])
     
     @property
-    def returns(self):
+    def returns(self) -> list:
+        """
+        Return a list of return values for the function processor.
+        """
         return [self._label]
     
     @property
-    def callable_(self):
+    def callable_(self) -> callable:
+        """
+        Return the callable for the function processor.
+        """
         return self._callable_
     
     @callable_.setter
-    def callable_(self, obj):
+    def callable_(self, obj) -> None:
         if not callable(obj):
             raise ValueError("Input `obj` must be callable.")
         self._callable_ = obj
@@ -80,26 +105,36 @@ class ProcessFunction(ProcessorBase):
             label = self._callable_.__name__
         return label
 
-    def analyze(self, **kwargs):
-        return {self._label: self._callable_(**kwargs)}
+    def analyze(self, **params):
+        return {self._label: self._callable_(**params)}
     
 
-class ProcessSchema(ProcessorBase):
+class SchemaProcessor(ModelProcessorBase):
     """
-    This class is built around a schema `dict` or `JSON` file which contains 
-    information on a series of logical tests based on a number of parameters, 
-    returning a single output or a `dict` of output key: value pairs. Because 
-    these use static logical schemas, they are effective for performing more 
-    the more logical processes of the model or replacing table references.
+    Class for defining a model processor using a schema.
+
+    Parameters
+    ----------
+    schema : dict, str, or path
+        Schema data following the required structure of the `SchemaProcessor` 
+        class. Can be input as a Python `dict`, an absolute path to a JSON 
+        file, or a relative path to a JSON file within the default 
+        `SCHEMA_PATH` directories.
+    label : str, optional
+        Label associated with the model component.
+    tags : list, optional
+        List of tags to be associated with the model component. Tags may be 
+        shared between multiple components, allowing them to be referenced 
+        collectively.
 
     Schema Structure
     ----------------
     doc = {
-        # Label to be used with the `ProcessSchema` instance built from this 
+        # Label to be used with the `SchemaProcessor` instance built from this 
         # data.
         "label": "schema_1",
-        # List of parameter names which will be passed to the `ProcessSchema` 
-        # as `**kwargs`.
+        # List of parameter names which will be passed to the `SchemaProcessor` 
+        # as `**params`.
         "parameters": ["lookup_param", "numerical_param"],
 
         # List of actions of equal length to `parameters`. These actions will 
@@ -136,46 +171,33 @@ class ProcessSchema(ProcessorBase):
     }
 
     Based on this schema, running the following code will produce the result 
-    below:
+    below::
 
-    ```
-    >>> ps = ProcessSchema(doc)
+    >>> ps = SchemaProcessor(doc)
     >>> ps.analyze(lookup_param="b", numerical_param=5)
     {"x": 100, "y": 200}
-    ```
-
-    Parameters
-    ----------
-    schema : dict, str, or path
-        Schema data following the required structure of the `ProcessSchema` 
-        class. Can be input as a Python `dict`, an absolute path to a JSON 
-        file, or a relative path to a JSON file within the default 
-        `SCHEMA_PATH` directories.
-    label : str, optional
-        Label associated with the `ProcessFunction`. If not provided, will default 
-        to the `label` parameter of the input schema.
-    tags : list, optional
-        List of tags to be associated with the `ProcessFunction`. Tags may be 
-        shared between multiple `ProcessFunction` instances, allowing them to 
-        be referenced collectively.
     """
-
-    _valid_actions = ['get', 'lt', 'gt', 'lte', 'gte']
-
-    def __init__(self, schema, label=None, tags=[]):
+    
+    def __init__(self, schema: dict, label: str=None, tags: list=[]) -> None:
         self.schema = schema
         self.label = label
         self.tags = tags
 
     @property
-    def parameters(self):
-        return self._schema['parameters']
+    def params(self):
+        """
+        Return a list of parameters for the schema processor.
+        """
+        return self._schema['params']
     
     @property
     def returns(self):
+        """
+        Return a list of return values for the schema processor.
+        """
         # Traverse data to retrieve keys of first valid output data subset
         data = self._schema['data']
-        for parameter in self.parameters:
+        for param in self.params:
             data = list(data.values())[0]
         # Check for return type of dict or value
         if isinstance(data, dict):
@@ -185,10 +207,16 @@ class ProcessSchema(ProcessorBase):
 
     @property
     def actions(self):
+        """
+        Return a list of actions for the schema processor.
+        """
         return self._schema['actions']
 
     @property
     def data(self):
+        """
+        Return the logical data for the schema processor.
+        """
         return self._schema['data']
 
     @property
@@ -202,55 +230,56 @@ class ProcessSchema(ProcessorBase):
             _load_schema(obj)
         )
         self._schema = obj
-        self._label = obj['label']
+        self._label = getattr(obj, 'label', None)
 
     def _validate_label(self, label):
         if label is None:
             label = self._schema['label']
         return label
 
-    def _validate_schema(self, obj):
-        # Check for required structure
-        try:
-            keys = obj["parameters"]
-        except KeyError:
-            raise KeyError(
-                "Input schema is missing the required `parameters` "
-                "information."
-            )
-        try:
-            actions = obj["actions"]
-            assert len(actions) == len(keys)
-        except KeyError:
-            raise KeyError(
-                "Input schema is missing the required `actions` information."
-            )
-        except AssertionError:
-            raise ValueError(
-                "Number of `actions` must be equal to the number of "
-                "`parameters` in the provided schema."
-            )
-        try:
-            assert all(action in self._valid_actions for action in actions)
-        except:
-            raise ValueError(
-                f"Each input `action` must only be one of "
-                f"{self._valid_actions}."
-            )
-        try:
-            data = obj["data"]
-        except KeyError:
-            raise KeyError(
-                "Input schema is missing the required `data` information."
-            )
-        try:
-            obj["label"]
-        except KeyError:
-            raise KeyError(
-                "Input schema is missing the required `label` information."
-            )
-        return obj
-
+    @classmethod
+    def _validate_schema_processor(schema):
+            # Check for required structure
+            try:
+                keys = schema["parameters"]
+            except KeyError:
+                raise KeyError(
+                    "Input schema is missing the required `parameters` "
+                    "information."
+                )
+            try:
+                actions = schema["actions"]
+                assert len(actions) == len(keys)
+            except KeyError:
+                raise KeyError(
+                    "Input schema is missing the required `actions` information."
+                )
+            except AssertionError:
+                raise ValueError(
+                    "Number of `actions` must be equal to the number of "
+                    "`parameters` in the provided schema."
+                )
+            try:
+                assert all(action in _VALID_SCHEMA_ACTIONS for action in actions)
+            except:
+                raise ValueError(
+                    f"Each input `action` must only be one of "
+                    f"{_VALID_SCHEMA_ACTIONS}."
+                )
+            try:
+                data = schema["data"]
+            except KeyError:
+                raise KeyError(
+                    "Input schema is missing the required `data` information."
+                )
+            try:
+                schema["label"]
+            except KeyError:
+                raise KeyError(
+                    "Input schema is missing the required `label` information."
+                )
+            return schema
+    
     def analyze(self, **params):
         """
         Analyze the schema using the input parameters which must align with 
@@ -266,7 +295,7 @@ class ProcessSchema(ProcessorBase):
                 parameter_value = params[parameter]
             except KeyError:
                 raise KeyError(
-                    f"Missing required `ProcessSchema` parameter `{parameter}`."
+                    f"Missing required `SchemaProcessor` parameter `{parameter}`."
                 )
             # Check action with the appropriate test
             try:
