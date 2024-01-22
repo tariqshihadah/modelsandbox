@@ -141,7 +141,7 @@ For models which require references or logical patterns such as lookup tables, w
     # example.py
 
     # Define a process schema according to documentation
-    schema = {
+    model.add_schema({
         "label": "ticket_cost",
         "parameters": ["destination", "airline_class"],
         "actions": ["get", "get"],
@@ -157,10 +157,7 @@ For models which require references or logical patterns such as lookup tables, w
                 "First": 965
             }
         }
-    }
-
-    # Add the process schema to the model
-    model.add_schema(schema)
+    })
 
 If we make this addition to a new layer before our initial layer, this will allow us to input the ``destination`` and ``airline_class`` parameters instead of the ``ticket_cost`` parameter directly, which will instead be automatically computed for us. Note that this could also be done by creating a separate ``.py`` or ``.json`` file and loading it into the model file or passing the path of the separate file to the ``add_schema`` method. Let's take another look at the model's ``structure`` and ``parameters`` properties with the newly-defined model::
 
@@ -228,7 +225,7 @@ The final ``example.py`` model file is shown below::
     model.add_layer('Compute ticket cost')
 
     # Define a process schema for computing ticket cost
-    schema = {
+    model.add_schema({
         "label": "ticket_cost",
         "parameters": ["destination", "airline_class"],
         "actions": ["get", "get"],
@@ -244,9 +241,7 @@ The final ``example.py`` model file is shown below::
                 "First": 965
             }
         }
-    }
-    # Add the process schema to the model
-    model.add_schema(schema)
+    })
 
     # Add a layer to the model to compute additional costs
     model.add_layer('Compute expenses')

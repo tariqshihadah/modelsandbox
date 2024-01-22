@@ -7,7 +7,7 @@ model = Model()
 model.add_layer('Compute ticket cost')
 
 # Define a process schema for computing ticket cost
-schema = {
+model.add_schema({
     "label": "ticket_cost",
     "parameters": ["destination", "airline_class"],
     "actions": ["get", "get"],
@@ -23,9 +23,7 @@ schema = {
             "First": 965
         }
     }
-}
-# Add the process schema to the model
-model.add_schema(schema)
+})
 # Add a layer to the model to compute additional costs
 model.add_layer('Compute expenses')
 

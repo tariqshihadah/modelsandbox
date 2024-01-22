@@ -54,10 +54,6 @@ class Model(object):
         self.label = label
                                          
     @property
-    def model_path(self):
-        return os.path.dirname(os.path.realpath(__file__))
-    
-    @property
     def layers(self):
         """
         List of all defined layers within the model.
@@ -377,6 +373,9 @@ class ProcessLayer(object):
 
     def add_schema(self, schema, **kwargs):
         """
+        Add a logical schema-based `ProcessSchema` to the layer. Can be passed 
+        an actual `ProcessSchema` instance, a schema `dict`, or a path to a 
+        valid JSON file which will be loaded.
         """
         # Check input type
         if isinstance(schema, ProcessSchema):
