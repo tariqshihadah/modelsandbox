@@ -31,13 +31,13 @@ Once the ``Model`` class has been instantiated, we can begin building a basic mo
     model.add_layer('Compute expenses')
 
     # Add a processor to compute travel cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def travel_cost(number_of_travelers, ticket_cost):
         return number_of_travelers * ticket_cost
 
 Inspecting the Model
 --------------------
-The ``include_process_function`` method returns a decorator which can be placed in front of a function definition, adding that function to the model and exposing its features at the model level. If we save the model in ``example.py`` as a basic Python file or as a Python module, we can then import it and run it in a Jupyter Notebook or elsewhere, and using the ``structure`` and ``parameters`` properties, we can see that the ``travel_cost`` function is now built into the model::
+The ``add_wrapped`` method returns a decorator which can be placed in front of a function definition, adding that function to the model and exposing its features at the model level. If we save the model in ``example.py`` as a basic Python file or as a Python module, we can then import it and run it in a Jupyter Notebook or elsewhere, and using the ``structure`` and ``parameters`` properties, we can see that the ``travel_cost`` function is now built into the model::
 
     # example.ipynb
 
@@ -77,12 +77,12 @@ This basic model doesn't offer much benefit over a simple Python function which 
     # example.py
 
     # Add processor to compute lodging cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def lodging_cost(number_of_travelers, nightly_cost, number_of_nights):
         return number_of_travelers * nightly_cost * number_of_nights
 
     # Add processor to compute per diem
-    @model.include_process_function()
+    @model.add_wrapped()
     def per_diem_cost(number_of_travelers, number_of_nights, per_diem):
         return number_of_travelers * number_of_nights * per_diem
 
@@ -94,7 +94,7 @@ We've added a couple additional computations at the first level. If we want to t
     model.add_layer('Aggregate expenses')
 
     # Add processor to compute total trip cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def total_trip_cost(travel_cost, lodging_cost, per_diem_cost):
         return travel_cost + lodging_cost + per_diem_cost
 
@@ -136,7 +136,7 @@ Note that though some parameters, such as the ``number_of_travelers`` parameter,
 
 Process Schemas
 ---------------
-For models which require references or logical patterns such as lookup tables, we can also employ the ``ProcessSchema`` class in addition to the ``ProcessFunction`` class we've been using with the ``include_process_function`` method/decorator. To add such a feature to our model, we can do the following::
+For models which require references or logical patterns such as lookup tables, we can also employ the ``ProcessSchema`` class in addition to the ``ProcessFunction`` class we've been using with the ``add_wrapped`` method/decorator. To add such a feature to our model, we can do the following::
 
     # example.py
 
@@ -160,9 +160,9 @@ For models which require references or logical patterns such as lookup tables, w
     }
 
     # Add the process schema to the model
-    model.add_process_schema(schema)
+    model.add_schema(schema)
 
-If we make this addition to a new layer before our initial layer, this will allow us to input the ``destination`` and ``airline_class`` parameters instead of the ``ticket_cost`` parameter directly, which will instead be automatically computed for us. Note that this could also be done by creating a separate ``.py`` or ``.json`` file and loading it into the model file or passing the path of the separate file to the ``add_process_schema`` method. Let's take another look at the model's ``structure`` and ``parameters`` properties with the newly-defined model::
+If we make this addition to a new layer before our initial layer, this will allow us to input the ``destination`` and ``airline_class`` parameters instead of the ``ticket_cost`` parameter directly, which will instead be automatically computed for us. Note that this could also be done by creating a separate ``.py`` or ``.json`` file and loading it into the model file or passing the path of the separate file to the ``add_schema`` method. Let's take another look at the model's ``structure`` and ``parameters`` properties with the newly-defined model::
 
     # example.ipynb
 
@@ -246,23 +246,23 @@ The final ``example.py`` model file is shown below::
         }
     }
     # Add the process schema to the model
-    model.add_process_schema(schema)
+    model.add_schema(schema)
 
     # Add a layer to the model to compute additional costs
     model.add_layer('Compute expenses')
 
     # Add a processor to compute travel cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def travel_cost(number_of_travelers, ticket_cost):
         return number_of_travelers * ticket_cost
 
     # Add processor to compute lodging cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def lodging_cost(number_of_travelers, nightly_cost, number_of_nights):
         return number_of_travelers * nightly_cost * number_of_nights
 
     # Add processor to compute per diem
-    @model.include_process_function()
+    @model.add_wrapped()
     def per_diem_cost(number_of_travelers, number_of_nights, per_diem):
         return number_of_travelers * number_of_nights * per_diem
 
@@ -270,6 +270,6 @@ The final ``example.py`` model file is shown below::
     model.add_layer('Aggregate expenses')
 
     # Add processor to compute total trip cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def total_trip_cost(travel_cost, lodging_cost, per_diem_cost):
         return travel_cost + lodging_cost + per_diem_cost

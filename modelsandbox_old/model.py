@@ -1,7 +1,7 @@
 import json, os, itertools
-from modelsandbox.processors import ProcessFunction, ProcessSchema
-from modelsandbox.validation import ExtendedValidator as Validator
-from modelsandbox.helpers import _load_schema
+from modelsandbox_old.processors import ProcessFunction, ProcessSchema
+from modelsandbox_old.validation import ExtendedValidator as Validator
+from modelsandbox_old.helpers import _load_schema
 
 
 class Model(object):

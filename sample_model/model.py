@@ -29,13 +29,13 @@ model.add_validation(os.path.join(SCHEMA_PATH, 'validation.json'))
 # -----------------------------------------------------------------------------
 model.add_layer('SPF calculations')
 
-@model.include_process_function(tags=['spf'])
+@model.add_wrapped(tags=['spf'])
 def n_kabco(aadt, length):
     # Compute number of crashes
     n = aadt * length * 365 * 10E-6 * math.exp(-0.312)
     return n
 
-@model.include_process_function(tags=['spf'])
+@model.add_wrapped(tags=['spf'])
 def overdispersion(length):
     # Compute overdispersion
     k = 0.236 / length
@@ -47,7 +47,7 @@ def overdispersion(length):
 # -----------------------------------------------------------------------------
 model.add_layer('AF calculations')
 
-@model.include_process_function(tags=['af'])
+@model.add_wrapped(tags=['af'])
 def af_lane_width(lane_width, aadt):
     # Compute adjustment factor
     if lane_width < 10:
@@ -60,7 +60,7 @@ def af_lane_width(lane_width, aadt):
         af = 1
     return af
 
-@model.include_process_function(tags=['af'])
+@model.add_wrapped(tags=['af'])
 def af_shoulder_width(shoulder_width, aadt):
     # Compute adjustment factor
     if shoulder_width < 2:
@@ -75,12 +75,12 @@ def af_shoulder_width(shoulder_width, aadt):
         af = np.clip(0.98 + 0.6875e-4 * (aadt - 400), 0.98, 0.87)
     return af
 
-model.add_process_schema(
+model.add_schema(
     os.path.join(SCHEMA_PATH, 'af_shoulder_type.json'),
     tags=['af']
 )
 
-@model.include_process_function(tags=['af'])
+@model.add_wrapped(tags=['af'])
 def af_horizontal_curve(curve_length, curve_radius, spiral):
     # Check if provided
     if (curve_length == 0) or (curve_radius == 0):
@@ -106,7 +106,7 @@ def af_horizontal_curve(curve_length, curve_radius, spiral):
 # -----------------------------------------------------------------------------
 model.add_layer('AF aggregation')
 
-@model.include_process_function()
+@model.add_wrapped()
 def af_total(__af):
     return np.prod(list(__af.values()))
 
@@ -116,7 +116,7 @@ def af_total(__af):
 # -----------------------------------------------------------------------------
 model.add_layer('Crash prediction')
 
-@model.include_process_function()
+@model.add_wrapped()
 def predicted_kabco(n_kabco, af_total):
     return n_kabco * af_total
 
@@ -126,7 +126,7 @@ def predicted_kabco(n_kabco, af_total):
 # -----------------------------------------------------------------------------
 model.add_layer('Empirical-Bayes')
 
-@model.include_process_function()
+@model.add_wrapped()
 def expected_kabco(observed_kabco, predicted_kabco, overdispersion):
     # Compute predicted crash weighting
     weight = 1 / (1 + overdispersion * (predicted_kabco))
