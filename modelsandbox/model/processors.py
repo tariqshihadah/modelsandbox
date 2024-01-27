@@ -1,21 +1,7 @@
 from typing import Any
 from modelsandbox.globals import _VALID_SCHEMA_ACTIONS
 from modelsandbox.helpers import _load_schema
-from modelsandbox.model.base import ModelComponentBase
-
-
-class ModelProcessorBase(ModelComponentBase):
-    """
-    Base class for model processors.
-
-    Model processors are the lowest level of model definition. They include 
-    the following subclasses:
-
-    - FunctionProcessor
-    - SchemaProcessor
-    - EmptyProcessor
-    """
-    pass
+from modelsandbox.model.base import ModelProcessorBase
 
 
 class EmptyProcessor(ModelProcessorBase):

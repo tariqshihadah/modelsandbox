@@ -1,5 +1,5 @@
 from modelsandbox.model.base import ModelComponentBase
-from modelsandbox.model.layer import ModelLayer
+from modelsandbox.model.structure import ModelLayer
 from modelsandbox.model.processors import FunctionProcessor, SchemaProcessor, EmptyProcessor
 
 
