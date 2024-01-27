@@ -58,6 +58,7 @@ class ModelSequence(ModelStructureBase):
             index = len([i for i in self._members if isinstance(i, ModelLayer)])
             label = f"Layer {index + 1}"
         # Create the model layer
+        tags = self._validate_tags(tags)
         layer = ModelLayer(label=label, tags=self._tags + tags)
         self._members.append(layer)
         return layer
@@ -133,6 +134,7 @@ class ModelLayer(ModelStructureBase):
             index = len([i for i in self._members if isinstance(i, ModelSequence)])
             label = f"Sequence {index + 1}"
         # Create the model sequence
+        tags = self._validate_tags(tags)
         sequence = ModelSequence(label=label, tags=self._tags + tags)
         self._members.append(sequence)
         return sequence
@@ -173,6 +175,7 @@ class ModelLayer(ModelStructureBase):
             collectively.
         """
         # Create the model schema
+        tags = self._validate_tags(tags)
         processor = SchemaProcessor(
             schema, label=label, tags=self._tags + tags
         )
@@ -198,6 +201,7 @@ class ModelLayer(ModelStructureBase):
             collectively.
         """
         # Create the model function
+        tags = self._validate_tags(tags)
         processor = FunctionProcessor(
             function, label=label, tags=self._tags + tags
         )
@@ -238,6 +242,7 @@ class ModelLayer(ModelStructureBase):
             collectively.
         """
         # Create the model component
+        tags = self._validate_tags(tags)
         processor = EmptyProcessor(label=label, tags=self._tags + tags)
         # Add the model processor to the model layer
         self._members.append(processor)

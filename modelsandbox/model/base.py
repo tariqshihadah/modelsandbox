@@ -16,7 +16,7 @@ class ModelComponentBase(object):
         return self._label
     
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}('label={self.label}', tags={self.tags})"
+        return f"{self.__class__.__name__}(label='{self.label}', tags={self.tags})"
     
     def __contains__(self, item) -> bool:
         return item in self.returns
@@ -59,15 +59,7 @@ class ModelComponentBase(object):
     
     @tags.setter
     def tags(self, tags: list) -> None:
-        # Validate input
-        if tags is None:
-            tags = []
-        elif isinstance(tags, str):
-            tags = [tags]
-        else:
-            tags = list(tags)
-        # Format tags
-        self._tags = [self._validate_tag(tag) for tag in set(tags)]
+        self._tags = self._validate_tags(tags)
 
     def _validate_label(self, label: str) -> str:
         """
@@ -87,6 +79,21 @@ class ModelComponentBase(object):
         elif iskeyword(tag):
             raise ValueError("Tag cannot be a Python keyword.")
         return tag
+    
+    @classmethod
+    def _validate_tags(cls, tags: list) -> list:
+        """
+        Validate tags for the model component.
+        """
+        # Validate input
+        if tags is None:
+            tags = []
+        elif isinstance(tags, str):
+            tags = [tags]
+        else:
+            tags = list(tags)
+        # Format tags
+        return [cls._validate_tag(tag) for tag in set(tags)]
     
     def set_label(self, label: str) -> None:
         """
