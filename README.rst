@@ -1,14 +1,14 @@
 Overview
 ========
-The ``modelsandbox`` and its core ``Model`` class allow for users to build intricate, multi-level, highly parameterized mathematical models without needing extensive knowledge of Python to design complex classes and analysis structures. Models are defined using a series of computational layers which can be created with the ``add_layer()`` class method and which are invoked sequentially when the model is called. These layers are populated with a series of processors which can be created in multiple ways and which are also invoked sequentially within each layer when the model is called.
+The ``modelsandbox`` package and its core ``Model`` class allow for users to build intricate, multi-level, highly parameterized mathematical models without needing extensive knowledge of Python to design complex classes and analysis structures. Models are defined using a series of computational layers which can be created with the ``add_layer()`` class method and which are invoked sequentially when the model is called. These layers are populated with a series of processors which can be created in multiple ways and which are also invoked sequentially within each layer when the model is called.
 
-Processors are the building blocks of a model, defining individual parameterized mathematical or computational processes within each layer. When the model is run, each layer is processed sequentially and each processor is processed sequentially within the layer. The parameters required by each processor are collected and exposed at the model level, requiring all to be input when running the model. These parameters are then passed as keyword arguments to each layer, and the outputs of each processor are collected and added to the ``dict`` of parameters based on the processor label or schema data and are then passed as keyword arguments to the next layer. In this way, processor outputs can be referenced and used in subsequent layers of the model.
+Processors are the building blocks of a model, defining individual parameterized mathematical or computational processes within each layer. When the model is run, each layer is processed sequentially and each processor is processed sequentially within the layer. The parameters required by each processor are collected and exposed at the model level in the ``params`` property, requiring all to be input when running the model. These parameters are then passed as keyword arguments to each layer, and the outputs of each processor are collected and added to the ``dict`` of parameters based on the processor label or schema data and are then passed as keyword arguments to the next layer. In this way, processor outputs can be referenced and used in subsequent layers of the model. Outputs of each model component are also collected and exposed at the model level in the ``returns`` property.
 
 Types of processors are represented by the following classes:
 
-* ``ProcessFunction`` This class is built around a single callable, most commonly a defined Python function, which takes a number of parameters and performs a single model task, returning a single output. Because these use callables which can be flexibly defined in Python, they are effective for performing the more mathematical processes of the model.
+* ``FunctionProcessor`` This class is built around a single callable, most commonly a defined Python function, which takes a number of parameters and performs a single model task, returning a single output. Because these use callables which can be flexibly defined in Python, they are effective for performing the more mathematical processes of the model.
 
-* ``ProcessSchema`` This class is built around a schema ``dict`` or ``JSON`` file which contains information on a series of logical tests based on a number of parameters, returning a single output or a ``dict`` of output key: value pairs. Because these use static logical schemas, they are effective for performing more the more logical processes of the model or replacing table references.
+* ``SchemaProcessor`` This class is built around a schema ``dict`` or ``JSON`` file which contains information on a series of logical tests based on a number of parameters, returning a single output or a ``dict`` of output key: value pairs. Because these use static logical schemas, they are effective for performing more the more logical processes of the model or replacing table references.
 
 Basic Implementation
 ====================
@@ -23,7 +23,7 @@ Creating a new model from scratch is easy. The ``Model`` class provides instant 
 
 Adding Process Functions
 ------------------------
-Once the ``Model`` class has been instantiated, we can begin building a basic model by adding a layer and a ``ProcessFunction``::
+Once the ``Model`` class has been instantiated, we can begin building a basic model by adding a layer and a ``FunctionProcessor``::
 
     # example.py
 
@@ -31,13 +31,13 @@ Once the ``Model`` class has been instantiated, we can begin building a basic mo
     model.add_layer('Compute expenses')
 
     # Add a processor to compute travel cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def travel_cost(number_of_travelers, ticket_cost):
         return number_of_travelers * ticket_cost
 
 Inspecting the Model
 --------------------
-The ``include_process_function`` method returns a decorator which can be placed in front of a function definition, adding that function to the model and exposing its features at the model level. If we save the model in ``example.py`` as a basic Python file or as a Python module, we can then import it and run it in a Jupyter Notebook or elsewhere, and using the ``structure`` and ``parameters`` properties, we can see that the ``travel_cost`` function is now built into the model::
+The ``add_wrapped`` method returns a decorator which can be placed in front of a function definition, adding that function to the model and exposing its features at the model level. If we save the model in ``example.py`` as a basic Python file or as a Python module, we can then import it and run it in a Jupyter Notebook or elsewhere, and using the ``structure`` and ``parameters`` properties, we can see that the ``travel_cost`` function is now built into the model::
 
     # example.ipynb
 
@@ -77,12 +77,12 @@ This basic model doesn't offer much benefit over a simple Python function which 
     # example.py
 
     # Add processor to compute lodging cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def lodging_cost(number_of_travelers, nightly_cost, number_of_nights):
         return number_of_travelers * nightly_cost * number_of_nights
 
     # Add processor to compute per diem
-    @model.include_process_function()
+    @model.add_wrapped()
     def per_diem_cost(number_of_travelers, number_of_nights, per_diem):
         return number_of_travelers * number_of_nights * per_diem
 
@@ -94,7 +94,7 @@ We've added a couple additional computations at the first level. If we want to t
     model.add_layer('Aggregate expenses')
 
     # Add processor to compute total trip cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def total_trip_cost(travel_cost, lodging_cost, per_diem_cost):
         return travel_cost + lodging_cost + per_diem_cost
 
@@ -136,7 +136,7 @@ Note that though some parameters, such as the ``number_of_travelers`` parameter,
 
 Process Schemas
 ---------------
-For models which require references or logical patterns such as lookup tables, we can also employ the ``ProcessSchema`` class in addition to the ``ProcessFunction`` class we've been using with the ``include_process_function`` method/decorator. To add such a feature to our model, we can do the following::
+For models which require references or logical patterns such as lookup tables, we can also employ the ``SchemaProcessor`` class in addition to the ``FunctionProcessor`` class we've been using with the ``add_wrapped`` method/decorator. To add such a feature to our model, we can do the following::
 
     # example.py
 
@@ -252,17 +252,17 @@ The final ``example.py`` model file is shown below::
     model.add_layer('Compute expenses')
 
     # Add a processor to compute travel cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def travel_cost(number_of_travelers, ticket_cost):
         return number_of_travelers * ticket_cost
 
     # Add processor to compute lodging cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def lodging_cost(number_of_travelers, nightly_cost, number_of_nights):
         return number_of_travelers * nightly_cost * number_of_nights
 
     # Add processor to compute per diem
-    @model.include_process_function()
+    @model.add_wrapped()
     def per_diem_cost(number_of_travelers, number_of_nights, per_diem):
         return number_of_travelers * number_of_nights * per_diem
 
@@ -270,6 +270,6 @@ The final ``example.py`` model file is shown below::
     model.add_layer('Aggregate expenses')
 
     # Add processor to compute total trip cost
-    @model.include_process_function()
+    @model.add_wrapped()
     def total_trip_cost(travel_cost, lodging_cost, per_diem_cost):
         return travel_cost + lodging_cost + per_diem_cost
