@@ -15,6 +15,30 @@ class ModelComponentBase(object):
     def __name__(self) -> str:
         return self._label
     
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}('label={self.label}', tags={self.tags})"
+    
+    def __contains__(self, item) -> bool:
+        return item in self.returns
+    
+    @property
+    def params(self) -> list:
+        """
+        Return a list of parameters for the model component.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not implement params."
+        )
+    
+    @property
+    def returns(self) -> list:
+        """
+        Return a list of parameters for the model component.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not implement returns."
+        )
+    
     @property
     def label(self) -> str:
         """
