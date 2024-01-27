@@ -1,9 +1,9 @@
 from __future__ import annotations
-from modelsandbox.model.base import ModelComponentBase
+from modelsandbox.model.base import ModelStructureBase, ModelComponentBase
 from modelsandbox.model.processors import ModelProcessorBase, FunctionProcessor, SchemaProcessor, EmptyProcessor
 
 
-class ModelSequence(ModelComponentBase):
+class ModelSequence(ModelStructureBase):
     """
     Main class for model Sequences which contain individual model layers 
     which will be executed sequentially.
@@ -23,6 +23,17 @@ class ModelSequence(ModelComponentBase):
 
     def __init__(self, label: str=None, tags: list=[]) -> None:
         super().__init__(label=label, tags=tags)
+
+    def __getitem__(self, index):
+        # Return the layer if it exists
+        try:
+            return self._members[index]
+        # Create the layer if it does not exist
+        except:
+            # Build earlier layers if required
+            for i in range(len(self._members), index + 1):
+                layer = self.add_layer()
+            return layer
 
     @property
     def layers(self) -> list:
@@ -50,9 +61,35 @@ class ModelSequence(ModelComponentBase):
         layer = ModelLayer(label=label, tags=self._tags + tags)
         self._members.append(layer)
         return layer
+    
+    def analyze(self, **params) -> dict:
+        """
+        Execute the model sequence.
+
+        Parameters
+        ----------
+        params : dict
+            Dictionary of parameters to be passed to the first layer in the 
+            sequence.
+
+        Returns
+        -------
+        returns : dict
+            Dictionary of return values from the model sequence.
+        """
+        # Initialize the return values
+        returns = {}
+        returns.update(params)
+        # Execute the model layers
+        for layer in self._members:
+            returns_i = layer.analyze(**returns)
+            returns.update(returns_i)
+
+        # Return the results of analyzing all layers
+        return returns
 
 
-class ModelLayer(ModelComponentBase):
+class ModelLayer(ModelStructureBase):
     """
     Main class for model Layers which may contain individual model 
     processors or additional model sequences.
@@ -77,10 +114,10 @@ class ModelLayer(ModelComponentBase):
     def components(self) -> list:
         return self._members
     
-    def add_layer(self, label: str=None, tags: list=[]) -> None:
+    def add_sequence(self, label: str=None, tags: list=[]) -> ModelSequence:
         """
-        Add a new model Layer to the existing model Layer.
-
+        Add a new model Sequence to the existing model Layer.
+        
         Parameters
         ----------
         label : str, optional
@@ -93,14 +130,34 @@ class ModelLayer(ModelComponentBase):
         # Check label
         if label is None:
             # Use default label
-            index = len([i for i in self._components if isinstance(i, ModelLayer)])
-            label = f"Layer {index + 1}"
-        # Create the model layer
-        layer = ModelLayer(label=label, tags=self._tags + tags)
-        self._components.append(layer)
-        return layer
+            index = len([i for i in self._members if isinstance(i, ModelSequence)])
+            label = f"Sequence {index + 1}"
+        # Create the model sequence
+        sequence = ModelSequence(label=label, tags=self._tags + tags)
+        self._members.append(sequence)
+        return sequence
     
-    def add_schema(self, schema: dict, label: str=None, tags: list=[]) -> None:
+    def add_processor(self, processor: ModelProcessorBase) -> ModelProcessorBase:
+        """
+        Add an existing model processor to the existing model Layer.
+
+        Parameters
+        ----------
+        processor : ModelProcessorBase
+            Model processor to be added to the model Layer.
+        """
+        # Validate type
+        if not isinstance(processor, ModelProcessorBase):
+            raise TypeError(
+                f"Processor must be of type {ModelProcessorBase}."
+            )
+        # Add the model processor to the model layer
+        self._members.append(processor)
+        return processor
+    
+    def add_schema(
+            self, schema: dict, label: str=None, tags: list=[]
+        ) -> SchemaProcessor:
         """
         Add a new model schema to the existing model Layer.
 
@@ -119,10 +176,13 @@ class ModelLayer(ModelComponentBase):
         processor = SchemaProcessor(
             schema, label=label, tags=self._tags + tags
         )
-        self._components.append(processor)
+        # Add the model processor to the model layer
+        self._members.append(processor)
         return processor
 
-    def add_function(self, function, label: str=None, tags: list=[]) -> None:
+    def add_function(
+            self, function, label: str=None, tags: list=[]
+        ) -> FunctionProcessor:
         """
         Add a new model function to the existing model Layer.
 
@@ -141,10 +201,11 @@ class ModelLayer(ModelComponentBase):
         processor = FunctionProcessor(
             function, label=label, tags=self._tags + tags
         )
-        self._components.append(processor)
+        # Add the model processor to the model layer
+        self._members.append(processor)
         return processor
     
-    def add_wrapped(self, label: str=None, tags: list=[]) -> None:
+    def add_wrapped(self, label: str=None, tags: list=[]) -> callable:
         """
         Add a new model function to the existing model Layer by returning a 
         decorator to wrap the function.
@@ -159,7 +220,7 @@ class ModelLayer(ModelComponentBase):
             collectively.
         """
         # Define the wrapper
-        def wrapper(function):
+        def wrapper(function) -> FunctionProcessor:
             return self.add_function(function, label=label, tags=tags)
         return wrapper
     
@@ -178,10 +239,11 @@ class ModelLayer(ModelComponentBase):
         """
         # Create the model component
         processor = EmptyProcessor(label=label, tags=self._tags + tags)
-        self._components.append(processor)
+        # Add the model processor to the model layer
+        self._members.append(processor)
         return processor
     
-    def add_component(self, component: ModelComponentBase) -> None:
+    def add_component(self, component: ModelComponentBase) -> ModelComponentBase:
         """
         Add an existing model component to the existing model Layer.
 
@@ -190,23 +252,9 @@ class ModelLayer(ModelComponentBase):
         component : ModelComponentBase
             Model component to be added to the model Layer.
         """
-        # Add the model component
-        self._components.append(component)
+        # Add the model component to the model layer
+        self._members.append(component)
         return component
-    
-    def add_components(self, components: list) -> None:
-        """
-        Add multiple existing model components to the existing model Layer.
-
-        Parameters
-        ----------
-        components : list
-            List of model components to be added to the model Layer.
-        """
-        # Add the model components
-        for component in components:
-            self.add_component(component)
-        return components
     
     def remove_component(self, index: int) -> None:
         """
@@ -218,35 +266,20 @@ class ModelLayer(ModelComponentBase):
             Index of the model component to be removed from the model Layer.
         """
         # Remove the model component
-        del self._components[index]
-        return None
-    
-    def remove_components(self, indices: list) -> None:
-        """
-        Remove multiple existing model components from the existing model Layer.
-
-        Parameters
-        ----------
-        indices : list
-            List of indices of model components to be removed from the model 
-            Layer.
-        """
-        # Remove the model components
-        for index in sorted(indices, reverse=True):
-            self.remove_component(index)
+        del self._members[index]
         return None
     
     def clear(self) -> None:
         """
         Clear all model components from the model Layer.
         """
-        # Clear the model components
-        self._components = []
+        # Clear all model components
+        self._members = []
         return None
     
     def analyze(self, **params) -> dict:
         """
-        Execute the model component.
+        Execute the model layer.
 
         Parameters
         ----------
@@ -255,21 +288,17 @@ class ModelLayer(ModelComponentBase):
 
         Returns
         -------
-        dict
+        returns : dict
             Dictionary of return values from the model component.
         """
         # Initialize the return values
         returns = {}
         # Execute the model components
-        print(f'\n{self.label} layer parameters: ', self.params)
-        for component in self._components:
-            # Filter parameters
-            print(f'\n{component.label} component parameters: ', component.params)
-            print(f'\nAvailable parameters: ', params)
+        for component in self._members:
+            # Filter input parameters based on member parameter requirements
             params_i = {k: v for k, v in params.items() if k in component.params}
             returns_i = component.analyze(**params_i)
             returns.update(returns_i)
-            print(f'\nProduced returns: ', returns_i)
 
         # Update tagged returns
         for tag, processors in self.tagged.items():

@@ -165,8 +165,8 @@ class ModelStructureBase(ModelComponentBase):
                 processors.append(member)
             else:
                 raise TypeError(
-                    f"Members of {self.__class__} must be instances of 
-                    ModelStructureBase or ModelProcessorBase."
+                    f"Members of {self.__class__} must be instances of "
+                    f"ModelStructureBase or ModelProcessorBase."
                 )
         return processors
     
@@ -183,8 +183,8 @@ class ModelStructureBase(ModelComponentBase):
                 structure[member.label] = member
             else:
                 raise TypeError(
-                    f"Members of {self.__class__} must be instances of 
-                    ModelStructureBase or ModelProcessorBase."
+                    f"Members of {self.__class__} must be instances of "
+                    f"ModelStructureBase or ModelProcessorBase."
                 )
         return structure
     

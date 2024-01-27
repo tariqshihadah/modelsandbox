@@ -1,6 +1,4 @@
-from modelsandbox.model.base import ModelComponentBase
-from modelsandbox.model.structure import ModelLayer
-from modelsandbox.model.processors import FunctionProcessor, SchemaProcessor, EmptyProcessor
+from modelsandbox.model.structure import ModelSequence, ModelLayer
 
 
 class Model(object):
@@ -9,7 +7,7 @@ class Model(object):
     """
 
     def __init__(self, **kwargs):
-        self._root = ModelLayer(**kwargs)
+        self._root = ModelSequence(**kwargs)
 
     def __getitem__(self, index):
         return self._root[index]
