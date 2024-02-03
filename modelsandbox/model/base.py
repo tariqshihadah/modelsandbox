@@ -4,52 +4,46 @@ from keyword import iskeyword
 import itertools
 
 
-class ModelComponentBase(object):
+class BaseCallable(object):
     """
-    Base class for model components.
+    Base class for callable model components.
     """
+
+    def __init__(self, *args, **kwargs) -> None:
+        pass
 
     def __call__(self, **params) -> dict:
         return self.analyze(**params)
-    
-    def __name__(self) -> str:
-        return self._label
-    
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(label='{self.label}', tags={self.tags})"
-    
-    def __contains__(self, item) -> bool:
-        return item in self.returns
     
     @property
     def params(self) -> list:
         """
         Return a list of parameters for the model component.
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} does not implement params."
-        )
+        raise NotImplementedError
     
     @property
     def returns(self) -> list:
         """
         Return a list of parameters for the model component.
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} does not implement returns."
-        )
+        raise NotImplementedError
     
-    @property
-    def label(self) -> str:
+    def analyze(self, **params) -> dict:
         """
-        Return the label for the model component.
+        Execute the model component.
         """
-        return self._label
+        raise NotImplementedError
     
-    @label.setter
-    def label(self, label: str) -> None:
-        self._label = self._validate_label(label)
-    
+
+class BaseTaggable(object):
+    """
+    Base class for taggable model components.
+    """
+
+    def __init__(self, tags: list=[], *args, **kwargs) -> None:
+        pass
+
     @property
     def tags(self) -> list:
         """
@@ -61,12 +55,6 @@ class ModelComponentBase(object):
     def tags(self, tags: list) -> None:
         self._tags = self._validate_tags(tags)
 
-    def _validate_label(self, label: str) -> str:
-        """
-        Validate the label for the model component.
-        """
-        return label
-    
     @classmethod
     def _validate_tag(cls, tag: str) -> str:
         """
@@ -95,12 +83,6 @@ class ModelComponentBase(object):
         # Format tags
         return [cls._validate_tag(tag) for tag in set(tags)]
     
-    def set_label(self, label: str) -> None:
-        """
-        Set the label for the model component.
-        """
-        self.label = label
-
     def set_tags(self, tags: list) -> None:
         """
         Set the tags for the model component.
@@ -120,12 +102,129 @@ class ModelComponentBase(object):
         for tag in tags:
             self.tags.remove(tag)
 
-    def analyze(self, **params) -> dict:
-        """
-        Execute the model component.
-        """
-        raise NotImplementedError
 
+class BaseLabeled(object):
+    """
+    Base class for labeled model components.
+    """
+
+    def __init__(self, label: str, *args, **kwargs) -> None:
+        self.label = label
+
+    def __name__(self) -> str:
+        return self._label
+
+    @property
+    def label(self) -> str:
+        """
+        Return the label for the model component.
+        """
+        return self._label
+    
+    @label.setter
+    def label(self, label: str) -> None:
+        self._label = self._validate_label(label)
+    
+    def _validate_label(self, label: str) -> str:
+        """
+        Validate the label for the model component.
+        """
+        if not isinstance(label, str):
+            raise TypeError("Label must be a string.")
+        elif not label.isidentifier():
+            raise ValueError("Label must be a valid Python identifier string.")
+        elif iskeyword(label):
+            raise ValueError("Label cannot be a Python keyword.")
+        return label
+    
+    def set_label(self, label: str) -> None:
+        """
+        Set the label for the model component.
+        """
+        self.label = label
+
+
+class BaseContainer(object):
+    """
+    Base class for container model components.
+    """
+
+    _member_type = "member"
+    _member_types = "members"
+    _valid_member_types = []
+
+    def __init__(self, members: list=[], *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._members = self._validate_members(members)
+
+    def __len__(self) -> int:
+        return len(self._members)
+    
+    def __getitem__(self, index):
+        try:
+            return self._members[index]
+        except:
+            raise IndexError(
+                f"Index {index} is out of range of the {self.__class__} with "
+                f"{len(self._members)} members."
+            )
+    
+    def __iter__(self):
+        return iter(self._members)
+    
+    def __contains__(self, member):
+        return member in self._members
+    
+    def _validate_member(self, member) -> object:
+        """
+        Validate a member for the model component.
+        """
+        if not isinstance(member, self._valid_member_types):
+            raise TypeError(
+                f"Members of {self.__class__} must be instances of "
+                f"{self._valid_member_types}."
+            )
+        return member
+    
+    def _validate_members(self, members: list) -> list:
+        """
+        Validate members for the model component.
+        """
+        return [self._validate_member(member) for member in members]
+    
+    @property
+    def members(self) -> list:
+        """
+        Return a list of model component members.
+        """
+        return self._members
+    
+    @members.setter
+    def members(self, members: list) -> None:
+        self._members = self._validate_members(members)
+
+
+class BaseLayer(BaseCallable, BaseTaggable, BaseLabeled, BaseContainer): pass
+
+
+class BaseSequence(BaseCallable, BaseTaggable, BaseLabeled, BaseContainer): pass
+
+
+class BaseProcessor(BaseCallable, BaseTaggable, BaseLabeled): pass
+
+
+BaseLayer._valid_member_types = [BaseSequence, BaseProcessor]
+BaseSequence._valid_member_types = [BaseLayer, BaseProcessor]
+
+
+class ModelComponentBase(object):
+    """
+    Base class for model components.
+    """
+    
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(label='{self.label}', tags={self.tags})"
+    
 
 class ModelStructureBase(ModelComponentBase):
     """
