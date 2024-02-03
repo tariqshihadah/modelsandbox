@@ -203,6 +203,71 @@ class BaseContainer(object):
     def members(self, members: list) -> None:
         self._members = self._validate_members(members)
 
+    @property
+    def processors(self) -> list:
+        """
+        Return a nested list processors in the model structure.
+        """
+        processors = []
+        for member in self._members:
+            if isinstance(member, BaseContainer):
+                processors.append(member.processors)
+            elif isinstance(member, BaseProcessor):
+                processors.append(member)
+            else:
+                raise TypeError("Invalid member type.")
+        return processors
+    
+    @property
+    def structure(self) -> dict:
+        """
+        Return a nested dictionary of the model structure.
+        """
+        structure = {}
+        for member in self._members:
+            if isinstance(member, BaseContainer):
+                structure[member.label] = member.structure
+            elif isinstance(member, BaseProcessor):
+                structure[member.label] = member
+            else:
+                raise TypeError("Invalid member type.")
+        return structure
+    
+    @property
+    def processors_flat(self) -> list:
+        """
+        Return a flat list of processors in the model structure.
+        """
+        processors = []
+        for member in self._members:
+            if isinstance(member, BaseContainer):
+                processors.extend(member.processors_flat)
+            elif isinstance(member, BaseProcessor):
+                processors.append(member)
+            else:
+                raise TypeError("Invalid member type.")
+        return processors
+    
+    @property
+    def all_tags(self):
+        """
+        List of unique processor tags included within the model structure.
+        """
+        tags = list(itertools.chain.from_iterable(
+            p.tags for p in self.processors_flat))
+        return list(set(tags))
+
+    @property
+    def tagged(self):
+        """
+        Dictionary of unique processor tags and lists of all processors 
+        associated with each tag within the model structure.
+        """
+        tagged = {}
+        for tag in self.all_tags:
+            tagged[tag] = [p for p in self.processors_flat if tag in p.tags]
+        return tagged
+
 
 class BaseLayer(BaseCallable, BaseTaggable, BaseLabeled, BaseContainer): pass
 
@@ -215,150 +280,3 @@ class BaseProcessor(BaseCallable, BaseTaggable, BaseLabeled): pass
 
 BaseLayer._valid_member_types = [BaseSequence, BaseProcessor]
 BaseSequence._valid_member_types = [BaseLayer, BaseProcessor]
-
-
-class ModelComponentBase(object):
-    """
-    Base class for model components.
-    """
-    
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(label='{self.label}', tags={self.tags})"
-    
-
-class ModelStructureBase(ModelComponentBase):
-    """
-    Base class for model structures.
-    """
-
-    _member_type = "member"
-    _member_types = "members"
-    
-    def __init__(self, label: str=None, tags: list=[]) -> None:
-        self._members = []
-        self.label = label
-        self.tags = tags
-
-    def __len__(self) -> int:
-        return len(self._members)
-    
-    def __getitem__(self, index):
-        try:
-            return self._members[index]
-        except:
-            raise IndexError(
-                f"Index {index} is out of range of the {self.__class__} with "
-                f"{len(self._members)} {self._member_types}."
-            )
-        
-    @property
-    def layers(self) -> list:
-        return self._layers
-
-    @property
-    def params(self) -> list:
-        """
-        Return a list of parameters for all members in the model structure.
-        """
-        params = []
-        for member in self._members:
-            params.extend(member.params)
-        return list(set(params))
-    
-    @property
-    def returns(self) -> list:
-        """
-        Return a list of return values for all members in the model structure.
-        """
-        returns = []
-        for member in self._members:
-            returns.extend(member.returns)
-        return list(set(returns))
-    
-    @property
-    def members(self) -> list:
-        """
-        Return a list of model structure members.
-        """
-        return self._members
-        
-    @property
-    def processors(self) -> list:
-        """
-        Return a nested list processors in the model structure.
-        """
-        processors = []
-        for member in self._members:
-            if isinstance(member, ModelStructureBase):
-                processors.append(member.processors)
-            elif isinstance(member, ModelProcessorBase):
-                processors.append(member)
-            else:
-                raise TypeError(
-                    f"Members of {self.__class__} must be instances of "
-                    f"ModelStructureBase or ModelProcessorBase."
-                )
-        return processors
-    
-    @property
-    def structure(self) -> dict:
-        """
-        Return a nested dictionary of the model structure.
-        """
-        structure = {}
-        for member in self._members:
-            if isinstance(member, ModelStructureBase):
-                structure[member.label] = member.structure
-            elif isinstance(member, ModelProcessorBase):
-                structure[member.label] = member
-            else:
-                raise TypeError(
-                    f"Members of {self.__class__} must be instances of "
-                    f"ModelStructureBase or ModelProcessorBase."
-                )
-        return structure
-    
-    @property
-    def all_tags(self):
-        """
-        List of unique processor tags included within the model structure.
-        """
-        # Get list of all processors
-        try:
-            processors = list(itertools.chain.from_iterable(self.processors))
-        except TypeError:
-            processors = self.processors
-        # Get tags
-        tags = list(itertools.chain.from_iterable(p.tags for p in processors))
-        return list(set(tags))
-
-    @property
-    def tagged(self):
-        """
-        Dictionary of unique processor tags and lists of all processors 
-        associated with each tag within the model structure.
-        """
-        # Get list of all processors
-        try:
-            processors = list(itertools.chain.from_iterable(self.processors))
-        except TypeError:
-            processors = self.processors
-        # Find tagged processors
-        tagged = {}
-        for tag in self.all_tags:
-            tagged[tag] = [p for p in processors if tag in p.tags]
-        return tagged
-
-
-class ModelProcessorBase(ModelComponentBase):
-    """
-    Base class for model processors.
-
-    Model processors are the lowest level of model definition. They include 
-    the following subclasses:
-
-    - FunctionProcessor
-    - SchemaProcessor
-    - EmptyProcessor
-    """
-    pass
