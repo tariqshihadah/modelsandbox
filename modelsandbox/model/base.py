@@ -1,40 +1,49 @@
 from __future__ import annotations
-import re
+from typing import Union
 from keyword import iskeyword
 import itertools
 
 
-class BaseCallable(object):
+class BaseLabeled(object):
     """
-    Base class for callable model components.
+    Base class for labeled model components.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
-        pass
+    def __init__(self, label: str, *args, **kwargs) -> None:
+        self.label = label
 
-    def __call__(self, **params) -> dict:
-        return self.analyze(**params)
-    
+    def __name__(self) -> str:
+        return self._label
+
     @property
-    def params(self) -> list:
+    def label(self) -> str:
         """
-        Return a list of parameters for the model component.
+        Return the label for the model component.
         """
-        raise NotImplementedError
+        return self._label
     
-    @property
-    def returns(self) -> list:
-        """
-        Return a list of parameters for the model component.
-        """
-        raise NotImplementedError
+    @label.setter
+    def label(self, label: str) -> None:
+        self._label = self._validate_label(label)
     
-    def analyze(self, **params) -> dict:
+    def _validate_label(self, label: str) -> str:
         """
-        Execute the model component.
+        Validate the label for the model component.
         """
-        raise NotImplementedError
+        if not isinstance(label, str):
+            raise TypeError("Label must be a string.")
+        elif not label.isidentifier():
+            raise ValueError("Label must be a valid Python identifier string.")
+        elif iskeyword(label):
+            raise ValueError("Label cannot be a Python keyword.")
+        return label
     
+    def set_label(self, label: str) -> None:
+        """
+        Set the label for the model component.
+        """
+        self.label = label
+
 
 class BaseTaggable(object):
     """
@@ -42,7 +51,7 @@ class BaseTaggable(object):
     """
 
     def __init__(self, tags: list=[], *args, **kwargs) -> None:
-        pass
+        self.tags = tags
 
     @property
     def tags(self) -> list:
@@ -103,54 +112,102 @@ class BaseTaggable(object):
             self.tags.remove(tag)
 
 
-class BaseLabeled(object):
+class BaseCallable(object):
     """
-    Base class for labeled model components.
+    Base class for callable model components.
     """
 
-    def __init__(self, label: str, *args, **kwargs) -> None:
-        self.label = label
+    def __init__(self, hidden: Union[bool, list]=False, *args, **kwargs) -> None:
+        self.hidden_param = hidden
 
-    def __name__(self) -> str:
-        return self._label
+    def __call__(self, **params) -> dict:
+        return self.analyze(**params)
+    
+    @property
+    def hidden_param(self) -> Union[bool, list]:
+        return self._hidden_param
+    
+    @hidden_param.setter
+    def hidden_param(self, hidden: Union[bool, list]) -> None:
+        if not isinstance(hidden, (bool, list)):
+            raise ValueError(
+                "Input hidden must be a boolean or a list of parameters to "
+                "hide."
+            )
+        self._hidden_param = hidden
+    
+    @property
+    def params(self) -> list:
+        """
+        Return a list of parameters for the model component.
+        """
+        raise NotImplementedError
+    
+    @property
+    def returns(self) -> list:
+        """
+        Return a list of parameters for the model component.
+        """
+        raise NotImplementedError
+    
+    @property
+    def hidden(self) -> list:
+        """
+        Return a list of hidden return values for the model component.
+        """
+        return NotImplementedError
+    
+    def analyze(self, **params) -> dict:
+        """
+        Execute the model component.
+        """
+        raise NotImplementedError
+    
+
+class BaseProcessor(BaseCallable, BaseTaggable, BaseLabeled):
+    """
+    Base class for model processors.
+    """
+
+    def __init__(self, func: callable=None, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.func = func
 
     @property
-    def label(self) -> str:
+    def func(self) -> callable:
         """
-        Return the label for the model component.
+        Return the callable for the function processor.
         """
-        return self._label
+        return self._func
     
-    @label.setter
-    def label(self, label: str) -> None:
-        self._label = self._validate_label(label)
-    
-    def _validate_label(self, label: str) -> str:
-        """
-        Validate the label for the model component.
-        """
-        if not isinstance(label, str):
-            raise TypeError("Label must be a string.")
-        elif not label.isidentifier():
-            raise ValueError("Label must be a valid Python identifier string.")
-        elif iskeyword(label):
-            raise ValueError("Label cannot be a Python keyword.")
-        return label
-    
-    def set_label(self, label: str) -> None:
-        """
-        Set the label for the model component.
-        """
-        self.label = label
+    @func.setter
+    def func(self, obj) -> None:
+        if not callable(obj):
+            raise ValueError("Input func must be callable.")
+        self._func = obj
 
+    @property
+    def hidden(self) -> list:
+        """
+        Return a list of hidden return values for the model component.
+        """
+        # Check hidden parameter for additions
+        if self._hidden_param==True:
+            return self.returns
+        elif self._hidden_param==False:
+            return []
+        else:
+            return self._hidden_param
 
-class BaseContainer(object):
+    def analyze(self, **params):
+        return {self._label: self._callable_(**params)}
+    
+
+class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
     """
     Base class for container model components.
     """
 
-    _member_type = "member"
-    _member_types = "members"
     _valid_member_types = []
 
     def __init__(self, members: list=[], *args, **kwargs) -> None:
@@ -203,6 +260,51 @@ class BaseContainer(object):
     def members(self, members: list) -> None:
         self._members = self._validate_members(members)
 
+    @property
+    def params(self) -> list:
+        """
+        Return a list of parameters for the model component.
+        """
+        params = []
+        for member in self._members:
+            params.extend(member.params)
+        return list(set(params))
+    
+    @property
+    def hidden(self) -> list:
+        """
+        Return a list of hidden return values for the model component.
+        """
+        # Check hidden parameter for additions
+        if self._hidden_param==True:
+            return self.all_returns
+        elif self._hidden_param==False:
+            hidden = []
+        else:
+            hidden = self._hidden_param
+        # Add hidden returns from members
+        for member in self._members:
+            hidden.extend(member.hidden)
+        return list(set(hidden))
+    
+    @property
+    def all_returns(self) -> list:
+        """
+        Return a list of all return values for the model component, including
+        hidden returns.
+        """
+        returns = []
+        for member in self._members:
+            returns.extend(member.returns)
+        return list(set(returns))
+
+    @property
+    def returns(self) -> list:
+        """
+        Return a list of return values for the model component.
+        """
+        return self.all_returns
+    
     @property
     def processors(self) -> list:
         """
@@ -267,16 +369,65 @@ class BaseContainer(object):
         for tag in self.all_tags:
             tagged[tag] = [p for p in self.processors_flat if tag in p.tags]
         return tagged
+    
+    def add_member(self, member) -> None:
+        """
+        Add a member to the model component.
+        """
+        member = self._validate_member(member)
+        self._members.append(member)
 
 
-class BaseLayer(BaseCallable, BaseTaggable, BaseLabeled, BaseContainer): pass
+class Layer(BaseContainer):
+    """
+    Model layer which processes members concurrently.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
 
-class BaseSequence(BaseCallable, BaseTaggable, BaseLabeled, BaseContainer): pass
+class Sequence(BaseContainer):
+    """
+    Model sequence which processes members sequentially.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    @property
+    def returns(self) -> list:
+        """
+        Return a list of return values for the model component.
+        """
+        return list(set(self.all_returns) - set(self.hidden))
+    
+    def analyze(self, **params) -> dict:
+        """
+        Execute the model sequence.
+
+        Parameters
+        ----------
+        params : dict
+            Dictionary of parameters to be passed to the first member in the 
+            sequence.
+
+        Returns
+        -------
+        returns : dict
+            Dictionary of return values from the model sequence.
+        """
+        # Initialize the return values
+        returns = {}
+        returns.update(params)
+        # Execute the model layers
+        for layer in self._members:
+            returns_i = layer.analyze(**returns)
+            returns.update(returns_i)
+
+        # Return the results of analyzing all layers
+        return returns
 
 
-class BaseProcessor(BaseCallable, BaseTaggable, BaseLabeled): pass
-
-
-BaseLayer._valid_member_types = [BaseSequence, BaseProcessor]
-BaseSequence._valid_member_types = [BaseLayer, BaseProcessor]
+Layer._valid_member_types = [Sequence, BaseProcessor]
+Sequence._valid_member_types = [Layer, BaseProcessor]

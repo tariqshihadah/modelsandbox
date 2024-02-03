@@ -24,14 +24,14 @@ with model.root.add_layer('spf_calculations') as layer:
 
     # SPF 1
     with layer.add_sequence() as seq:
-        seq.add_schema('schema2.json', reveal=False)
+        seq.add_schema('schema2.json', hidden=True)
         seq.add_wrapped()
         def process(a, b, c, d):
             return a * b + c / d
         
     # SPF 2
     with layer.add_sequence() as seq:
-        seq.add_schema('schema3.json', reveal=False)
+        seq.add_schema('schema3.json', hidden=True)
         seq.add_wrapped()
         def process(a, b, c, d):
             return a * b + c / d
