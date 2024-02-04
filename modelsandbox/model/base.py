@@ -30,6 +30,8 @@ class BaseLabeled(object):
         """
         Validate the label for the model component.
         """
+        if label is None:
+            label = self._prepare_label()
         if not isinstance(label, str):
             raise TypeError("Label must be a string.")
         elif not label.isidentifier():
@@ -37,6 +39,13 @@ class BaseLabeled(object):
         elif iskeyword(label):
             raise ValueError("Label cannot be a Python keyword.")
         return label
+    
+    def _prepare_label(self, label) -> str:
+        """
+        Get the label for the model component if possible. Fallback method 
+        if no label is provided. Subclass-dependent.
+        """
+        raise ValueError("No label provided.")
     
     def set_label(self, label: str) -> None:
         """
@@ -155,8 +164,14 @@ class BaseCallable(object):
         """
         Return a list of hidden return values for the model component.
         """
-        return NotImplementedError
-    
+        # Check hidden parameter for additions
+        if self._hidden_param==True:
+            return self.returns
+        elif self._hidden_param==False:
+            return []
+        else:
+            return self._hidden_param
+
     def analyze(self, **params) -> dict:
         """
         Execute the model component.
@@ -168,40 +183,8 @@ class BaseProcessor(BaseCallable, BaseTaggable, BaseLabeled):
     """
     Base class for model processors.
     """
+    pass
 
-    def __init__(self, func: callable=None, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.func = func
-
-    @property
-    def func(self) -> callable:
-        """
-        Return the callable for the function processor.
-        """
-        return self._func
-    
-    @func.setter
-    def func(self, obj) -> None:
-        if not callable(obj):
-            raise ValueError("Input func must be callable.")
-        self._func = obj
-
-    @property
-    def hidden(self) -> list:
-        """
-        Return a list of hidden return values for the model component.
-        """
-        # Check hidden parameter for additions
-        if self._hidden_param==True:
-            return self.returns
-        elif self._hidden_param==False:
-            return []
-        else:
-            return self._hidden_param
-
-    def analyze(self, **params):
-        return {self._label: self._callable_(**params)}
-    
 
 class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
     """
@@ -261,14 +244,22 @@ class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
         self._members = self._validate_members(members)
 
     @property
-    def params(self) -> list:
+    def all_params(self) -> list:
         """
-        Return a list of parameters for the model component.
+        Return a list of all parameters for the model component, including 
+        those covered by hidden returns.
         """
         params = []
         for member in self._members:
             params.extend(member.params)
         return list(set(params))
+    
+    @property
+    def params(self) -> list:
+        """
+        Return a list of parameters for the model component.
+        """
+        return self.all_params
     
     @property
     def hidden(self) -> list:
@@ -394,6 +385,13 @@ class Sequence(BaseContainer):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+
+    @property
+    def params(self) -> list:
+        """
+        Return a list of parameters for the model component.
+        """
+        return list(set(self.all_params) - set(self.hidden))
 
     @property
     def returns(self) -> list:

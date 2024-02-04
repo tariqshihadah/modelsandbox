@@ -1,17 +1,15 @@
-from typing import Any
 from modelsandbox.globals import _VALID_SCHEMA_ACTIONS
 from modelsandbox.helpers import _load_schema
-from modelsandbox.model.base import ModelProcessorBase
+from modelsandbox.model.base import BaseProcessor
 
 
-class EmptyProcessor(ModelProcessorBase):
+class EmptyProcessor(BaseProcessor):
     """
     Class for defining an empty model processor.
     """
 
-    def __init__(self, label: str=None, tags: list=[]):
-        self.label = label
-        self.tags = tags
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @property
     def params(self):
@@ -27,11 +25,18 @@ class EmptyProcessor(ModelProcessorBase):
         """
         return []
     
+    @property
+    def hidden(self):
+        """
+        Return a list of hidden return values for the model component.
+        """
+        return []
+    
     def analyze(self, **params):
         return {}
     
 
-class FunctionProcessor(ModelProcessorBase):
+class FunctionProcessor(BaseProcessor):
     """
     Class for defining a model processor using a function.
     
@@ -43,7 +48,7 @@ class FunctionProcessor(ModelProcessorBase):
 
     Parameters
     ----------
-    function : callable
+    func : callable
         Callable object which will be the basis for the `FunctionProcessor`.
     label : str, optional
         Label associated with the model component.
@@ -53,49 +58,31 @@ class FunctionProcessor(ModelProcessorBase):
         collectively.
     """
 
-    def __init__(self, function, label: str=None, tags: list=[]):
-        self.callable_ = function
-        self.label = label
-        self.tags = tags
+    def __init__(self, func: callable=None, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.func = func
 
     @property
-    def params(self) -> list:
-        """
-        Return a list of parameters for the function processor.
-        """
-        num_args = self._callable_.__code__.co_argcount
-        return list(self._callable_.__code__.co_varnames[:num_args])
-    
-    @property
-    def returns(self) -> list:
-        """
-        Return a list of return values for the function processor.
-        """
-        return [self._label]
-    
-    @property
-    def callable_(self) -> callable:
+    def func(self) -> callable:
         """
         Return the callable for the function processor.
         """
-        return self._callable_
+        return self._func
     
-    @callable_.setter
-    def callable_(self, obj) -> None:
+    @func.setter
+    def func(self, obj) -> None:
         if not callable(obj):
-            raise ValueError("Input `obj` must be callable.")
-        self._callable_ = obj
-
-    def _validate_label(self, label):
-        if label is None:
-            label = self._callable_.__name__
-        return label
+            raise ValueError("Input func must be callable.")
+        self._func = obj
 
     def analyze(self, **params):
         return {self._label: self._callable_(**params)}
     
+    def _prepare_label(self):
+        label = self._func.__name__
 
-class SchemaProcessor(ModelProcessorBase):
+
+class SchemaProcessor(BaseProcessor):
     """
     Class for defining a model processor using a schema.
 
@@ -164,10 +151,9 @@ class SchemaProcessor(ModelProcessorBase):
     {"x": 100, "y": 200}
     """
     
-    def __init__(self, schema: dict, label: str=None, tags: list=[]) -> None:
+    def __init__(self, schema: dict, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.schema = schema
-        self.label = label
-        self.tags = tags
 
     @property
     def params(self):
@@ -218,53 +204,51 @@ class SchemaProcessor(ModelProcessorBase):
         self._schema = obj
         self._label = getattr(obj, 'label', None)
 
-    def _validate_label(self, label):
-        if label is None:
-            label = self._schema['label']
-        return label
+    def _prepare_label(self):
+        label = self._schema['label']
 
     @classmethod
     def _validate_schema(cls, schema):
-            # Check for required structure
-            try:
-                keys = schema["params"]
-            except KeyError:
-                raise KeyError(
-                    "Input schema is missing the required `params` "
-                    "information."
-                )
-            try:
-                actions = schema["actions"]
-                assert len(actions) == len(keys)
-            except KeyError:
-                raise KeyError(
-                    "Input schema is missing the required `actions` information."
-                )
-            except AssertionError:
-                raise ValueError(
-                    "Number of `actions` must be equal to the number of "
-                    "`params` in the provided schema."
-                )
-            try:
-                assert all(action in _VALID_SCHEMA_ACTIONS for action in actions)
-            except:
-                raise ValueError(
-                    f"Each input `action` must only be one of "
-                    f"{_VALID_SCHEMA_ACTIONS}."
-                )
-            try:
-                data = schema["data"]
-            except KeyError:
-                raise KeyError(
-                    "Input schema is missing the required `data` information."
-                )
-            try:
-                schema["label"]
-            except KeyError:
-                raise KeyError(
-                    "Input schema is missing the required `label` information."
-                )
-            return schema
+        # Check for required structure
+        try:
+            keys = schema["params"]
+        except KeyError:
+            raise KeyError(
+                "Input schema is missing the required `params` "
+                "information."
+            )
+        try:
+            actions = schema["actions"]
+            assert len(actions) == len(keys)
+        except KeyError:
+            raise KeyError(
+                "Input schema is missing the required `actions` information."
+            )
+        except AssertionError:
+            raise ValueError(
+                "Number of `actions` must be equal to the number of "
+                "`params` in the provided schema."
+            )
+        try:
+            assert all(action in _VALID_SCHEMA_ACTIONS for action in actions)
+        except:
+            raise ValueError(
+                f"Each input `action` must only be one of "
+                f"{_VALID_SCHEMA_ACTIONS}."
+            )
+        try:
+            data = schema["data"]
+        except KeyError:
+            raise KeyError(
+                "Input schema is missing the required `data` information."
+            )
+        try:
+            schema["label"]
+        except KeyError:
+            raise KeyError(
+                "Input schema is missing the required `label` information."
+            )
+        return schema
     
     def analyze(self, **params):
         """
