@@ -59,8 +59,8 @@ class FunctionProcessor(BaseProcessor):
     """
 
     def __init__(self, func: callable=None, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
         self.func = func
+        super().__init__(*args, **kwargs)
 
     @property
     def func(self) -> callable:
@@ -75,11 +75,21 @@ class FunctionProcessor(BaseProcessor):
             raise ValueError("Input func must be callable.")
         self._func = obj
 
+    @property
+    def params(self):
+        num_args = self._func.__code__.co_argcount
+        return list(self._func.__code__.co_varnames[:num_args])
+    
+    @property
+    def returns(self):
+        return [self._label]
+    
     def analyze(self, **params):
-        return {self._label: self._callable_(**params)}
+        params_clean = self._filter_params(**params)
+        return {self._label: self._func(**params_clean)}
     
     def _prepare_label(self):
-        label = self._func.__name__
+        return self._func.__name__
 
 
 class SchemaProcessor(BaseProcessor):
@@ -152,8 +162,8 @@ class SchemaProcessor(BaseProcessor):
     """
     
     def __init__(self, schema: dict, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
         self.schema = schema
+        super().__init__(*args, **kwargs)
 
     @property
     def params(self):
@@ -205,7 +215,7 @@ class SchemaProcessor(BaseProcessor):
         self._label = getattr(obj, 'label', None)
 
     def _prepare_label(self):
-        label = self._schema['label']
+        return self._schema['label']
 
     @classmethod
     def _validate_schema(cls, schema):

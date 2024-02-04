@@ -9,7 +9,8 @@ class BaseLabeled(object):
     Base class for labeled model components.
     """
 
-    def __init__(self, label: str, *args, **kwargs) -> None:
+    def __init__(self, label: str=None, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.label = label
 
     def __name__(self) -> str:
@@ -40,7 +41,7 @@ class BaseLabeled(object):
             raise ValueError("Label cannot be a Python keyword.")
         return label
     
-    def _prepare_label(self, label) -> str:
+    def _prepare_label(self) -> str:
         """
         Get the label for the model component if possible. Fallback method 
         if no label is provided. Subclass-dependent.
@@ -60,6 +61,7 @@ class BaseTaggable(object):
     """
 
     def __init__(self, tags: list=[], *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.tags = tags
 
     @property
@@ -127,6 +129,7 @@ class BaseCallable(object):
     """
 
     def __init__(self, hidden: Union[bool, list]=False, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.hidden_param = hidden
 
     def __call__(self, **params) -> dict:
@@ -171,6 +174,12 @@ class BaseCallable(object):
             return []
         else:
             return self._hidden_param
+        
+    def _filter_params(self, **params) -> dict:
+        """
+        Filter parameters for the model component.
+        """
+        return {k: v for k, v in params.items() if k in self.params}
 
     def analyze(self, **params) -> dict:
         """
@@ -183,7 +192,9 @@ class BaseProcessor(BaseCallable, BaseTaggable, BaseLabeled):
     """
     Base class for model processors.
     """
-    pass
+    
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
 
 class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
@@ -191,7 +202,7 @@ class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
     Base class for container model components.
     """
 
-    _valid_member_types = []
+    _valid_member_types = ()
 
     def __init__(self, members: list=[], *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -214,6 +225,12 @@ class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
     
     def __contains__(self, member):
         return member in self._members
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
     
     def _validate_member(self, member) -> object:
         """
@@ -259,8 +276,8 @@ class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
         """
         Return a list of parameters for the model component.
         """
-        return self.all_params
-    
+        return list(set(self.all_params) - set(self.hidden))
+
     @property
     def hidden(self) -> list:
         """
@@ -294,7 +311,7 @@ class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
         """
         Return a list of return values for the model component.
         """
-        return self.all_returns
+        return list(set(self.all_returns) - set(self.hidden))
     
     @property
     def processors(self) -> list:
@@ -367,65 +384,4 @@ class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
         """
         member = self._validate_member(member)
         self._members.append(member)
-
-
-class Layer(BaseContainer):
-    """
-    Model layer which processes members concurrently.
-    """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-
-class Sequence(BaseContainer):
-    """
-    Model sequence which processes members sequentially.
-    """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-    @property
-    def params(self) -> list:
-        """
-        Return a list of parameters for the model component.
-        """
-        return list(set(self.all_params) - set(self.hidden))
-
-    @property
-    def returns(self) -> list:
-        """
-        Return a list of return values for the model component.
-        """
-        return list(set(self.all_returns) - set(self.hidden))
-    
-    def analyze(self, **params) -> dict:
-        """
-        Execute the model sequence.
-
-        Parameters
-        ----------
-        params : dict
-            Dictionary of parameters to be passed to the first member in the 
-            sequence.
-
-        Returns
-        -------
-        returns : dict
-            Dictionary of return values from the model sequence.
-        """
-        # Initialize the return values
-        returns = {}
-        returns.update(params)
-        # Execute the model layers
-        for layer in self._members:
-            returns_i = layer.analyze(**returns)
-            returns.update(returns_i)
-
-        # Return the results of analyzing all layers
-        return returns
-
-
-Layer._valid_member_types = [Sequence, BaseProcessor]
-Sequence._valid_member_types = [Layer, BaseProcessor]
+        return member

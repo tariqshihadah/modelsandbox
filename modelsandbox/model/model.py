@@ -1,4 +1,4 @@
-from modelsandbox.model.structure import ModelSequence, ModelLayer
+from modelsandbox.model.containers import Sequence, Layer
 
 
 class Model(object):
@@ -7,7 +7,7 @@ class Model(object):
     """
 
     def __init__(self, **kwargs):
-        self._root = ModelSequence(**kwargs)
+        self._root = Sequence(**kwargs)
 
     def __getitem__(self, index):
         return self._root[index]
