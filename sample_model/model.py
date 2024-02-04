@@ -2,7 +2,7 @@
 # LOAD DEPENDENCIES
 # =============================================================================
 
-from modelsandbox_old import Model
+from modelsandbox import Model
 import os, math
 import numpy as np
 MODEL_PATH = os.path.abspath(os.path.dirname(__file__))
