@@ -4,7 +4,7 @@ from modelsandbox.model.base import BaseContainer, BaseProcessor
 from modelsandbox.model.processors import FunctionProcessor, SchemaProcessor, EmptyProcessor
 
 
-class ContainerAdder(object):
+class ComponentAdder(object):
     """
     Class for adding model components to a container.
     """
@@ -43,7 +43,7 @@ class ContainerAdder(object):
         return wrapper
 
 
-class Layer(BaseContainer, ContainerAdder):
+class Layer(BaseContainer, ComponentAdder):
     """
     Model layer which processes members concurrently.
     """
@@ -87,7 +87,7 @@ class Layer(BaseContainer, ContainerAdder):
         return returns
 
 
-class Sequence(BaseContainer, ContainerAdder):
+class Sequence(BaseContainer, ComponentAdder):
     """
     Model sequence which processes members sequentially.
     """

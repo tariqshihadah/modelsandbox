@@ -1,4 +1,6 @@
+from __future__ import annotations
 from modelsandbox.model.containers import Sequence, Layer
+from modelsandbox.model.processors import FunctionProcessor, SchemaProcessor, EmptyProcessor
 from modelsandbox.model.base import BaseContainer
 
 
@@ -104,6 +106,24 @@ class Cursor(object):
         Return the model component at the specified index.
         """
         return self.get_index(index)
+    
+    def __enter__(self):
+        # Get the currently indexed component
+        component = self.get_current()
+        # If the component is a container, attempt to enter it
+        if isinstance(component, BaseContainer):
+            if len(component) == 0:
+                raise IndexError(
+                    "Cannot enter an empty container. Add a new sub-container "
+                    "with the 'add_layer' or 'add_sequence' methods.")
+            self._index.append(len(component) - 1)
+        else:
+            raise TypeError("Cannot enter a non-container component.")
+        return self.get_current()
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        # Move down one level in the model cursor
+        self._index.pop()
 
     @property
     def model(self):
@@ -178,3 +198,91 @@ class Cursor(object):
         """
         return self._get_from_root(self._index + self._validate_index(index))
     
+    def add_layer(self, *args, **kwargs) -> Cursor:
+        """
+        Add a new model layer to the indexed model container.
+
+        Returns
+        -------
+        This method returns itself to allow for chaining and the use of the 
+        with statement syntax.
+        """
+        # Get current component
+        container = self.get_current()
+        # Confirm valid container
+        if not isinstance(container, BaseContainer):
+            raise TypeError("Cannot add component to a non-container component.")
+        # Add member
+        container.add_layer(*args, **kwargs)
+        return self
+    
+    def add_sequence(self, *args, **kwargs) -> Cursor:
+        """
+        Add a new model sequence to the indexed model layer.
+
+        Returns
+        -------
+        This method returns itself to allow for chaining and the use of the
+        with statement syntax.
+        """
+        # Get current component
+        container = self.get_current()
+        # Confirm valid container
+        if not isinstance(container, BaseContainer):
+            raise TypeError("Cannot add component to a non-container component.")
+        # Add member
+        container.add_sequence(*args, **kwargs)
+        return self
+    
+    def add_function(self, *args, **kwargs) -> Cursor:
+        """
+        Add a new model function to the indexed model layer.
+
+        Returns
+        -------
+        This method returns itself to allow for chaining and the use of the
+        with statement syntax.
+        """
+        # Get current component
+        container = self.get_current()
+        # Confirm valid container
+        if not isinstance(container, BaseContainer):
+            raise TypeError("Cannot add component to a non-container component.")
+        # Add member
+        container.add_function(*args, **kwargs)
+        return self
+    
+    def add_schema(self, *args, **kwargs) -> Cursor:
+        """
+        Add a new model schema to the indexed model layer.
+
+        Returns
+        -------
+        This method returns itself to allow for chaining and the use of the
+        with statement syntax.
+        """
+        # Get current component
+        container = self.get_current()
+        # Confirm valid container
+        if not isinstance(container, BaseContainer):
+            raise TypeError("Cannot add component to a non-container component.")
+        # Add member
+        container.add_schema(*args, **kwargs)
+        return self
+    
+    def add_wrapped(self, *args, **kwargs) -> callable:
+        """
+        Add a new model function to the indexed model layer by returning a 
+        decorator to wrap the function.
+
+        Returns
+        -------
+        This method returns a decorator to wrap the function.
+        """
+        # Get current component
+        container = self.get_current()
+        # Confirm valid container
+        if not isinstance(container, BaseContainer):
+            raise TypeError("Cannot add component to a non-container component.")
+        # Add member
+        return container.add_wrapped(*args, **kwargs)
