@@ -15,6 +15,7 @@ SCHEMA_PATH = os.path.join(MODEL_PATH, 'schemas')
 
 # Initialize the model class
 model = Model()
+cur = model.cursor
 
 # Add data validation
 model.add_validation(os.path.join(SCHEMA_PATH, 'validation.json'))
@@ -28,13 +29,13 @@ model.add_validation(os.path.join(SCHEMA_PATH, 'validation.json'))
 # Layer #1: SPF calculations
 # -----------------------------------------------------------------------------
 
-with model.root.add_layer() as layer:
-    with layer.add_sequence() as seq:
+with cur.add_layer():
+    with cur.add_sequence():
         # Add SPF parameters
-        seq.add_schema(os.path.join(SCHEMA_PATH, 'spf.json'), hidden=True)
+        cur.add_schema(os.path.join(SCHEMA_PATH, 'spf.json'), hidden=True)
 
         # Compute number of crashes
-        @seq.add_wrapped()
+        @cur.add_wrapped()
         def n_kabco(aadt, length):
             """
             Based on HSM Equation 10-7.
@@ -44,7 +45,7 @@ with model.root.add_layer() as layer:
             return n
 
         # Compute overdispersion
-        @seq.add_wrapped()
+        @cur.add_wrapped()
         def overdispersion(length):
             # Compute overdispersion
             k = 0.236 / length
@@ -55,9 +56,9 @@ with model.root.add_layer() as layer:
 # Layer #2: AF calculations
 # -----------------------------------------------------------------------------
 
-with model.root.add_layer() as layer:
+with cur.add_layer() as layer:
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_lane_width(lane_width, aadt):
         # Compute adjustment factor
         if lane_width < 10:
@@ -70,7 +71,7 @@ with model.root.add_layer() as layer:
             af = 1
         return af
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_shoulder_width(shoulder_width, aadt):
         # Compute adjustment factor
         if shoulder_width < 2:
@@ -85,9 +86,9 @@ with model.root.add_layer() as layer:
             af = np.clip(0.98 + 0.6875e-4 * (aadt - 400), 0.98, 0.87)
         return af
 
-    model.add_schema(os.path.join(SCHEMA_PATH, 'af_shoulder_type.json'))
+    cur.add_schema(os.path.join(SCHEMA_PATH, 'af_shoulder_type.json'))
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_horizontal_curve(curve_length, curve_radius, spiral):
         # Check if provided
         if (curve_length == 0) or (curve_radius == 0):
@@ -107,7 +108,7 @@ with model.root.add_layer() as layer:
         ) / (1.55 * curve_length)
         return af
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_se_variance(se_variance):
         """
         Based on HSM equation 10-14, 10-15, 10-16.
@@ -124,7 +125,7 @@ with model.root.add_layer() as layer:
             af = 1.00 + (6 * (se_variance - 0.01))
         return af
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_grade(grade):
         """
         Based on HSM table 10-11.
@@ -142,7 +143,7 @@ with model.root.add_layer() as layer:
             af = 1.16
         return af
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_driveway_density(aadt, length, driveway_density):
         """
         Based on HSM equation 10-17
@@ -155,7 +156,7 @@ with model.root.add_layer() as layer:
                 (0.322 + (5 * (0.05 - 0.005 * math.log(aadt))))
         return af
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_rumble_cl(rumble_cl):
         """
         Based on HSM page 10-29
@@ -167,7 +168,7 @@ with model.root.add_layer() as layer:
             af = 1.00
         return af
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_passing_lanes(passing_lanes):
         """
         Based on HSM page 10-29
@@ -181,7 +182,7 @@ with model.root.add_layer() as layer:
             af = 0.65
         return af
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_twltl(twltl, length, driveway_density):
         """
         Based on HSM equation 10-18 and 10-19.
@@ -197,7 +198,7 @@ with model.root.add_layer() as layer:
         return af
 
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_rhr(rhr):
         """
         Based on HSM equation 10-20 and the roadside hazard rating in appendix 13A
@@ -206,7 +207,7 @@ with model.root.add_layer() as layer:
         af = math.exp(-0.6869 + (0.0668 * rhr)) / math.exp(-0.4865)
         return af
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_lighting(lighting):
         """
         Based on HSM equation 10-21 and table 10-12.
@@ -218,7 +219,7 @@ with model.root.add_layer() as layer:
             af = 1.00
         return af
 
-    @layer.add_wrapped()
+    @cur.add_wrapped()
     def af_ase(ase):
         """
         Based on HSM page 10-31.
