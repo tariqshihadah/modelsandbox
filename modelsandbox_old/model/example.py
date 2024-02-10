@@ -1,4 +1,4 @@
-from modelsandbox.model.model import Model
+from modelsandbox_old.model.model import Model
 
 # FUNCTIONAL APPROACH
 model = Model()

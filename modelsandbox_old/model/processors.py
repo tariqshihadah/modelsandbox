@@ -1,6 +1,6 @@
-from modelsandbox.globals import _VALID_SCHEMA_ACTIONS
-from modelsandbox.helpers import _load_schema
-from modelsandbox.model.base import BaseProcessor
+from modelsandbox_old.globals import _VALID_SCHEMA_ACTIONS
+from modelsandbox_old.helpers import _load_schema
+from modelsandbox_old.model.base import BaseProcessor
 
 
 class EmptyProcessor(BaseProcessor):

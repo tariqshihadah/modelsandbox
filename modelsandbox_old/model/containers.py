@@ -1,7 +1,7 @@
 from __future__ import annotations
 from itertools import count
-from modelsandbox.model.base import BaseContainer, BaseProcessor
-from modelsandbox.model.processors import FunctionProcessor, SchemaProcessor, EmptyProcessor
+from modelsandbox_old.model.base import BaseContainer, BaseProcessor
+from modelsandbox_old.model.processors import FunctionProcessor, SchemaProcessor, EmptyProcessor
 
 
 class ContainerAdder(object):
