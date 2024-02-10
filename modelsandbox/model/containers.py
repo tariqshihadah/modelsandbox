@@ -131,5 +131,5 @@ class Sequence(BaseContainer, ContainerAdder):
         return returns
 
 
-Layer._valid_member_types = (Sequence, BaseProcessor)
-Sequence._valid_member_types = (Layer, BaseProcessor)
+Layer._valid_member_types = (Layer, Sequence, BaseProcessor)
+Sequence._valid_member_types = (Layer, Sequence, BaseProcessor)
