@@ -230,3 +230,14 @@ with cur.add_layer() as layer:
         else:
             af = 1.00
         return af
+
+with cur.add_layer():
+    @cur.add_wrapped()
+    def af_total(
+            af_lane_width, af_shoulder_width, af_horizontal_curve, af_se_variance, 
+            af_grade, af_driveway_density, af_rumble_cl, af_passing_lanes, 
+            af_twltl, af_rhr, af_lighting, af_ase
+        ):
+        # Compute adjustment factor
+        af = af_lane_width * af_shoulder_width * af_horizontal_curve * af_se_variance * af_grade * af_driveway_density * af_rumble_cl * af_passing_lanes * af_twltl * af_rhr * af_lighting * af_ase
+        return af
