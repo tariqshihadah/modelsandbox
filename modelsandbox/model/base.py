@@ -1,38 +1,66 @@
 from __future__ import annotations
 from typing import Union
 from keyword import iskeyword
-import itertools
 
 
-class BaseLabeled(object):
-    """
-    Base class for labeled model components.
-    """
+class BaseComponent(object):
 
-    def __init__(self, label: str=None, *args, **kwargs) -> None:
+    # Default order value
+    _default_order = 0
+
+    def __init__(self, *args, **kwargs) -> None:
+        try:
+            self.order = kwargs.pop('order')
+        except KeyError:
+            pass
+        try:
+            self.label = kwargs.pop('label')
+        except KeyError:
+            pass
         super().__init__(*args, **kwargs)
-        self.label = label
 
-    def __name__(self) -> str:
-        return self._label
+    def __init_subclass__(cls, *args, **kwargs) -> None:
+        # Set class-level values
+        cls._order = kwargs.pop('order', cls._default_order)
+        # Call super
+        super().__init_subclass__(*args, **kwargs)
 
     @property
-    def label(self) -> str:
-        """
-        Return the label for the model component.
-        """
-        return self._label
+    def order(self):
+        return self._order
     
+    @order.setter
+    def order(self, value):
+        if value is None:
+            self._order = self._default_order
+        elif isinstance(value, int):
+            self._order = value
+        else:
+            raise TypeError("Value must be of type int")
+    
+    @property
+    def default_label(self):
+        return self.__class__.__name__
+
+    @property
+    def label(self):
+        try:
+            return self._label
+        except AttributeError:
+            return self.default_label
+        
     @label.setter
-    def label(self, label: str) -> None:
-        self._label = self._validate_label(label)
-    
-    def _validate_label(self, label: str) -> str:
+    def label(self, value):
+        if value is None:
+            return
+        else:
+            self._label = self._validate_label(value)
+
+    @classmethod
+    def _validate_label(cls, label: str) -> str:
         """
-        Validate the label for the model component.
+        Validate a label for the model component.
         """
-        if label is None:
-            label = self._prepare_label()
         if not isinstance(label, str):
             raise TypeError("Label must be a string.")
         elif not label.isidentifier():
@@ -40,19 +68,6 @@ class BaseLabeled(object):
         elif iskeyword(label):
             raise ValueError("Label cannot be a Python keyword.")
         return label
-    
-    def _prepare_label(self) -> str:
-        """
-        Get the label for the model component if possible. Fallback method 
-        if no label is provided. Subclass-dependent.
-        """
-        raise ValueError("No label provided.")
-    
-    def set_label(self, label: str) -> None:
-        """
-        Set the label for the model component.
-        """
-        self.label = label
 
 
 class BaseTaggable(object):
@@ -61,8 +76,8 @@ class BaseTaggable(object):
     """
 
     def __init__(self, tags: list=[], *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
         self.tags = tags
+        super().__init__(*args, **kwargs)
 
     @property
     def tags(self) -> list:
@@ -129,8 +144,8 @@ class BaseCallable(object):
     """
 
     def __init__(self, hidden: Union[bool, list]=False, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
         self.hidden_param = hidden
+        super().__init__(*args, **kwargs)
 
     def __call__(self, **params) -> dict:
         return self.analyze(**params)
@@ -188,200 +203,10 @@ class BaseCallable(object):
         raise NotImplementedError
     
 
-class BaseProcessor(BaseCallable, BaseTaggable, BaseLabeled):
+class BaseProcessor(BaseComponent, BaseCallable, BaseTaggable):
     """
     Base class for model processors.
     """
     
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-
-
-class BaseContainer(BaseCallable, BaseTaggable, BaseLabeled):
-    """
-    Base class for container model components.
-    """
-
-    _valid_member_types = ()
-
-    def __init__(self, members: list=[], *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._members = self._validate_members(members)
-
-    def __len__(self) -> int:
-        return len(self._members)
-    
-    def __getitem__(self, index):
-        try:
-            return self._members[index]
-        except:
-            raise IndexError(
-                f"Index {index} is out of range of the {self.__class__} with "
-                f"{len(self._members)} members."
-            )
-    
-    def __iter__(self):
-        return iter(self._members)
-    
-    def __contains__(self, member):
-        return member in self._members
-    
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
-    
-    def _validate_member(self, member) -> object:
-        """
-        Validate a member for the model component.
-        """
-        if not isinstance(member, self._valid_member_types):
-            raise TypeError(
-                f"Members of {self.__class__} must be instances of "
-                f"{self._valid_member_types}."
-            )
-        return member
-    
-    def _validate_members(self, members: list) -> list:
-        """
-        Validate members for the model component.
-        """
-        return [self._validate_member(member) for member in members]
-    
-    @property
-    def members(self) -> list:
-        """
-        Return a list of model component members.
-        """
-        return self._members
-    
-    @members.setter
-    def members(self, members: list) -> None:
-        self._members = self._validate_members(members)
-
-    @property
-    def all_params(self) -> list:
-        """
-        Return a list of all parameters for the model component, including 
-        those covered by hidden returns.
-        """
-        params = []
-        for member in self._members:
-            params.extend(member.params)
-        return list(set(params))
-    
-    @property
-    def params(self) -> list:
-        """
-        Return a list of parameters for the model component.
-        """
-        return list(set(self.all_params) - set(self.hidden))
-
-    @property
-    def hidden(self) -> list:
-        """
-        Return a list of hidden return values for the model component.
-        """
-        # Check hidden parameter for additions
-        if self._hidden_param==True:
-            return self.all_returns
-        elif self._hidden_param==False:
-            hidden = []
-        else:
-            hidden = self._hidden_param
-        # Add hidden returns from members
-        for member in self._members:
-            hidden.extend(member.hidden)
-        return list(set(hidden))
-    
-    @property
-    def all_returns(self) -> list:
-        """
-        Return a list of all return values for the model component, including
-        hidden returns.
-        """
-        returns = []
-        for member in self._members:
-            returns.extend(member.returns)
-        return list(set(returns))
-
-    @property
-    def returns(self) -> list:
-        """
-        Return a list of return values for the model component.
-        """
-        return list(set(self.all_returns) - set(self.hidden))
-    
-    @property
-    def processors(self) -> list:
-        """
-        Return a nested list processors in the model structure.
-        """
-        processors = []
-        for member in self._members:
-            if isinstance(member, BaseContainer):
-                processors.append(member.processors)
-            elif isinstance(member, BaseProcessor):
-                processors.append(member)
-            else:
-                raise TypeError("Invalid member type.")
-        return processors
-    
-    @property
-    def structure(self) -> dict:
-        """
-        Return a nested dictionary of the model structure.
-        """
-        structure = {}
-        for member in self._members:
-            if isinstance(member, BaseContainer):
-                structure[member.label] = member.structure
-            elif isinstance(member, BaseProcessor):
-                structure[member.label] = member
-            else:
-                raise TypeError("Invalid member type.")
-        return structure
-    
-    @property
-    def processors_flat(self) -> list:
-        """
-        Return a flat list of processors in the model structure.
-        """
-        processors = []
-        for member in self._members:
-            if isinstance(member, BaseContainer):
-                processors.extend(member.processors_flat)
-            elif isinstance(member, BaseProcessor):
-                processors.append(member)
-            else:
-                raise TypeError("Invalid member type.")
-        return processors
-    
-    @property
-    def all_tags(self):
-        """
-        List of unique processor tags included within the model structure.
-        """
-        tags = list(itertools.chain.from_iterable(
-            p.tags for p in self.processors_flat))
-        return list(set(tags))
-
-    @property
-    def tagged(self):
-        """
-        Dictionary of unique processor tags and lists of all processors 
-        associated with each tag within the model structure.
-        """
-        tagged = {}
-        for tag in self.all_tags:
-            tagged[tag] = [p for p in self.processors_flat if tag in p.tags]
-        return tagged
-    
-    def add_member(self, member) -> None:
-        """
-        Add a member to the model component.
-        """
-        member = self._validate_member(member)
-        self._members.append(member)
-        return member

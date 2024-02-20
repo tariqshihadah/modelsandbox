@@ -36,7 +36,7 @@ class EmptyProcessor(BaseProcessor):
         return {}
     
 
-class FunctionProcessor(BaseProcessor):
+class Function(BaseProcessor):
     """
     Class for defining a model processor using a function.
     
@@ -63,17 +63,33 @@ class FunctionProcessor(BaseProcessor):
         super().__init__(*args, **kwargs)
 
     @property
+    def wrapper(self):
+        """
+        Return a wrapper which can be used to add the function to the 
+        processor using the decorator pattern.
+        """
+        def wrapper(func):
+            self.func = func
+            return self
+        return wrapper
+
+    @property
     def func(self) -> callable:
         """
         Return the callable for the function processor.
         """
+        if self._func is None:
+            raise ValueError("No callable function has been set.")
         return self._func
     
     @func.setter
     def func(self, obj) -> None:
-        if not callable(obj):
+        if obj is None:
+            self._func = None
+        elif not callable(obj):
             raise ValueError("Input func must be callable.")
-        self._func = obj
+        else:
+            self._func = obj
 
     @property
     def params(self):
@@ -82,24 +98,25 @@ class FunctionProcessor(BaseProcessor):
     
     @property
     def returns(self):
-        return [self._label]
+        return [self.label]
     
     def analyze(self, **params):
         params_clean = self._filter_params(**params)
-        return {self._label: self._func(**params_clean)}
+        return {self.label: self._func(**params_clean)}
     
-    def _prepare_label(self):
+    @property
+    def default_label(self):
         return self._func.__name__
 
 
-class SchemaProcessor(BaseProcessor):
+class LogicSchema(BaseProcessor):
     """
     Class for defining a model processor using a schema.
 
     Parameters
     ----------
     schema : dict, str, or path
-        Schema data following the required structure of the `SchemaProcessor` 
+        Schema data following the required structure of the `LogicSchema` 
         class. Can be input as a Python `dict`, an absolute path to a JSON 
         file, or a relative path to a JSON file within the default 
         `SCHEMA_PATH` directories.
@@ -113,10 +130,10 @@ class SchemaProcessor(BaseProcessor):
     Schema Structure
     ----------------
     doc = {
-        # Label to be used with the `SchemaProcessor` instance built from this 
+        # Label to be used with the `LogicSchema` instance built from this 
         # data.
         "label": "schema_1",
-        # List of parameter names which will be passed to the `SchemaProcessor` 
+        # List of parameter names which will be passed to the `LogicSchema` 
         # as `**params`.
         "params": ["lookup_param", "numerical_param"],
 
@@ -156,7 +173,7 @@ class SchemaProcessor(BaseProcessor):
     Based on this schema, running the following code will produce the result 
     below::
 
-    >>> ps = SchemaProcessor(doc)
+    >>> ps = LogicSchema(doc)
     >>> ps.analyze(lookup_param="b", numerical_param=5)
     {"x": 100, "y": 200}
     """
@@ -212,7 +229,7 @@ class SchemaProcessor(BaseProcessor):
             _load_schema(obj)
         )
         self._schema = obj
-        self._label = getattr(obj, 'label', None)
+        self.label = getattr(obj, 'label', None)
 
     def _prepare_label(self):
         return self._schema['label']
@@ -275,7 +292,7 @@ class SchemaProcessor(BaseProcessor):
                 param_value = params[param]
             except KeyError:
                 raise KeyError(
-                    f"Missing required `SchemaProcessor` parameter `{param}`."
+                    f"Missing required `LogicSchema` parameter `{param}`."
                 )
             # Check action with the appropriate test
             try:

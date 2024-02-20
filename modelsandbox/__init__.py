@@ -1,3 +1,2 @@
-from modelsandbox.model.model import Model
-from modelsandbox.model.processors import FunctionProcessor, SchemaProcessor, EmptyProcessor
+from modelsandbox.model.processors import Function, LogicSchema, EmptyProcessor
 from modelsandbox.validation import ExtendedValidator as Validator
