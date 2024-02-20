@@ -231,8 +231,12 @@ class LogicSchema(BaseProcessor):
         self._schema = obj
         self.label = getattr(obj, 'label', None)
 
-    def _prepare_label(self):
-        return self._schema['label']
+    @property
+    def default_label(self):
+        try:
+            return self._schema['label']
+        except:
+            return self.variable_name
 
     @classmethod
     def _validate_schema(cls, schema):
@@ -268,12 +272,6 @@ class LogicSchema(BaseProcessor):
         except KeyError:
             raise KeyError(
                 "Input schema is missing the required `data` information."
-            )
-        try:
-            schema["label"]
-        except KeyError:
-            raise KeyError(
-                "Input schema is missing the required `label` information."
             )
         return schema
     

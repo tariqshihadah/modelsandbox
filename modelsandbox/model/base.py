@@ -56,6 +56,13 @@ class BaseComponent(object):
         else:
             self._label = self._validate_label(value)
 
+    @property
+    def variable_name(self):
+        try:
+            globals.keys()[globals().values().index(self)]
+        except:
+            return
+
     @classmethod
     def _validate_label(cls, label: str) -> str:
         """
